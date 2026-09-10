@@ -22,6 +22,11 @@ historico ate ``t`` e projetado ``h`` passos a frente.  A persistencia usa o
 preco conhecido em ``t``.  Nenhuma observacao posterior a ``t`` entra na
 previsao para ``t+h``.
 
+O historico usa uma grade semanal explicita: lacunas ficam como NaN, nunca
+viram semanas consecutivas por compressao de linhas. Acuracia usa apenas pares
+origem/alvo observados. Se a janela de previsoes tem lacunas, o replay economico
+fica indisponivel: nao imputamos precos nem anualizamos semanas removidas.
+
 O holdout congelado NAO e reaberto: por padrao o experimento roda na janela de
 desenvolvimento (tudo antes de ``S10_HOLDOUT_START``).  Use ``--window holdout``
 apenas se aceitar mais uma leitura do holdout, e saiba que isso e uma decisao de
@@ -52,8 +57,18 @@ sys.path.insert(0, str(ROOT / "src"))
 from vs_epl_krls.fuel import load_anp_fuel_csv  # noqa: E402
 from vs_epl_krls.procurement import simulate_horizon_prebuy  # noqa: E402
 from vs_epl_krls.selection import S10_HOLDOUT_START  # noqa: E402
+from vs_epl_krls.weekly import weekly_grid  # noqa: E402
 
 DEFAULT_HORIZONS = (1, 2, 4, 8, 12)
+
+
+def _price_calendar(prices: pd.DataFrame) -> pd.DataFrame:
+    data = prices[["date", "price"]].copy()
+    data["price"] = pd.to_numeric(data["price"], errors="raise")
+    observed = data["price"].dropna().to_numpy(float)
+    if not np.isfinite(observed).all() or np.any(observed <= 0):
+        raise ValueError("observed prices must be finite and positive")
+    return weekly_grid(data)
 
 
 def _arima_path(history: np.ndarray, steps: int) -> float:
@@ -65,7 +80,8 @@ def _arima_path(history: np.ndarray, steps: int) -> float:
         warnings.simplefilter("ignore")
         try:
             fitted = ARIMA(history, order=(1, 1, 1)).fit()
-            return float(np.asarray(fitted.forecast(steps=steps))[-1])
+            point = float(np.asarray(fitted.forecast(steps=steps))[-1])
+            return point if np.isfinite(point) and point > 0 else float(history[-1])
         except Exception:
             # Fallback deliberado: sem convergencia, a persistencia e a
             # previsao honesta, nao um numero inventado por um modelo que falhou.
@@ -79,25 +95,90 @@ def build_horizon_predictions(
     start_index: int,
     min_train: int,
 ) -> pd.DataFrame:
-    """Walk-forward causal: origem ``t`` preve ``t+horizon`` sem ver o futuro."""
+    """Origem ``t`` preve a data ``t + horizon semanas``, sem imputar precos.
 
-    dates = pd.to_datetime(prices["date"]).to_numpy()
-    values = prices["price"].to_numpy(float)
+    ``start_index`` conta semanas na grade, inclusive ausencias. ``min_train``
+    exige observacoes reais anteriores a origem; NaN nao conta como treino.
+    Uma origem ausente nao emite previsao. Um alvo ausente permanece NaN,
+    sem impedir a emissao causal da previsao que seria feita naquela origem.
+    """
+
+    for name, value, minimum in (("horizon", horizon, 1), ("start_index", start_index, 0),
+                                 ("min_train", min_train, 1)):
+        if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < minimum:
+            raise ValueError(f"{name} must be an integer >= {minimum}")
+    calendar = _price_calendar(prices)
+    dates = pd.DatetimeIndex(calendar["date"])
+    values = calendar["price"].to_numpy(float)
+    observed_before = np.cumsum(np.isfinite(values)) - np.isfinite(values)
+    targets = calendar.set_index("date")["price"]
     rows: list[dict[str, object]] = []
-    for origin in range(max(start_index, min_train), len(values) - horizon):
+    for origin in range(start_index, len(values) - horizon):
+        if observed_before[origin] < min_train:
+            continue
         history = values[: origin + 1]
-        target = origin + horizon
+        target_date = dates[origin] + pd.Timedelta(weeks=horizon)
         rows.append(
             {
-                "target_date": pd.Timestamp(dates[target]),
-                "actual": float(values[target]),
+                "origin_date": dates[origin],
+                "target_date": target_date,
+                "actual": float(targets.loc[target_date]),
                 # A origem e o preco conhecido em ``t``: e o que a politica
                 # compara contra a previsao, e o que o replay valida.
                 "persistence": float(values[origin]),
-                "arima": _arima_path(history, horizon),
+                "arima": _arima_path(history, horizon) if np.isfinite(values[origin]) else np.nan,
             }
         )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["origin_date", "target_date", "actual", "persistence", "arima"])
+
+
+def summarize_predictions(predictions: pd.DataFrame, horizon: int, args: argparse.Namespace) -> dict:
+    """Report missing evidence explicitly; never compress a procurement replay."""
+    valid = np.isfinite(predictions[["actual", "persistence", "arima"]].to_numpy(float)).all(axis=1)
+    scored = predictions.loc[valid]
+    mae = float(np.abs(scored["arima"] - scored["actual"]).mean()) if len(scored) else None
+    naive = float(np.abs(scored["persistence"] - scored["actual"]).mean()) if len(scored) else None
+    row = {
+        "horizon_weeks": horizon,
+        "n_forecasts": int(np.isfinite(predictions["arima"].to_numpy(float)).sum()),
+        "n_scored": int(valid.sum()),
+        "n_unscored": int((~valid).sum()),
+        "n_decisions": None,
+        "mae": mae,
+        "persistence_mae": naive,
+        "mae_ratio_vs_persistence": mae / naive if naive is not None and naive > 0 else None,
+        "triggered_prebuys": None,
+        "trigger_precision": None,
+        "annualized_savings_brl": None,
+        "annualized_savings_ci90_low": None,
+        "annualized_savings_ci90_high": None,
+        "ci90_positive": None,
+        "procurement_status": "unavailable_insufficient_predictions",
+    }
+    if len(predictions) < max(3, horizon + 1):
+        return row
+    consecutive = predictions["target_date"].diff().iloc[1:].eq(pd.Timedelta(weeks=1)).all()
+    if not valid.all() or not consecutive:
+        row["procurement_status"] = "unavailable_missing_observations"
+        return row
+    backtest = simulate_horizon_prebuy(
+        predictions, horizon=horizon, prediction_column="arima", model_name=f"ARIMA h={horizon}",
+        monthly_liters=args.monthly_liters, flexibility_fraction=args.flexibility_fraction,
+        signal_threshold_brl_per_liter=args.signal_threshold,
+        carrying_cost_brl_per_liter_week=args.carrying_cost, random_state=args.random_state,
+    )
+    low, high = backtest.annualized_savings_ci90_brl
+    row.update({
+        "n_decisions": backtest.n_weeks - horizon,
+        "triggered_prebuys": backtest.triggered_prebuys,
+        "trigger_precision": backtest.trigger_precision,
+        "annualized_savings_brl": backtest.annualized_savings_brl,
+        "annualized_savings_ci90_low": low,
+        "annualized_savings_ci90_high": high,
+        "ci90_positive": bool(low > 0.0),
+        "procurement_status": "evaluated",
+    })
+    return row
 
 
 def run(args: argparse.Namespace) -> dict[str, object]:
@@ -107,8 +188,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         if "data" in fuel.columns
         else fuel
     )
-    prices = prices[["date", "price"]].dropna().reset_index(drop=True)
-    prices["date"] = pd.to_datetime(prices["date"])
+    prices = _price_calendar(prices)
 
     holdout_start = pd.Timestamp(S10_HOLDOUT_START)
     development = prices[prices["date"] < holdout_start].reset_index(drop=True)
@@ -131,55 +211,34 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             start_index=args.start_index,
             min_train=args.min_train,
         )
-        backtest = simulate_horizon_prebuy(
-            predictions,
-            horizon=horizon,
-            prediction_column="arima",
-            model_name=f"ARIMA h={horizon}",
-            monthly_liters=args.monthly_liters,
-            flexibility_fraction=args.flexibility_fraction,
-            signal_threshold_brl_per_liter=args.signal_threshold,
-            carrying_cost_brl_per_liter_week=args.carrying_cost,
-            random_state=args.random_state,
-        )
-        errors = np.abs(
-            predictions["arima"].to_numpy(float) - predictions["actual"].to_numpy(float)
-        )
-        naive = np.abs(
-            predictions["persistence"].to_numpy(float)
-            - predictions["actual"].to_numpy(float)
-        )
-        low, high = backtest.annualized_savings_ci90_brl
-        row = {
-            "horizon_weeks": horizon,
-            "n_decisions": backtest.n_weeks - horizon,
-            "mae": float(np.mean(errors)),
-            "persistence_mae": float(np.mean(naive)),
-            "mae_ratio_vs_persistence": float(np.mean(errors) / np.mean(naive)),
-            "triggered_prebuys": backtest.triggered_prebuys,
-            "trigger_precision": backtest.trigger_precision,
-            "annualized_savings_brl": backtest.annualized_savings_brl,
-            "annualized_savings_ci90_low": low,
-            "annualized_savings_ci90_high": high,
-            "ci90_positive": bool(low > 0.0),
-        }
+        row = summarize_predictions(predictions, horizon, args)
         results.append(row)
+        if row["procurement_status"] != "evaluated":
+            print(f"h={horizon:2d}  pares avaliados {row['n_scored']}  "
+                  f"replay economico indisponivel: {row['procurement_status']}")
+            continue
+        low, high = row["annualized_savings_ci90_low"], row["annualized_savings_ci90_high"]
         precision = "n/a" if row["trigger_precision"] is None else f"{row['trigger_precision']:.2f}"
+        ratio_label = "n/a" if row["mae_ratio_vs_persistence"] is None else f"{row['mae_ratio_vs_persistence']:.2f}x"
         print(
             f"h={horizon:2d}  decisoes {row['n_decisions']:4d}  "
-            f"MAE {row['mae']:.4f} ({row['mae_ratio_vs_persistence']:.2f}x persistencia)  "
+            f"MAE {row['mae']:.4f} ({ratio_label} persistencia)  "
             f"disparos {row['triggered_prebuys']:3d} prec {precision}  "
             f"economia/ano R$ {row['annualized_savings_brl']:>10,.0f}  "
             f"IC90 [{low:>9,.0f}, {high:>9,.0f}]"
             f"{'  <-- decidivel' if row['ci90_positive'] else ''}"
         )
 
-    best = max(results, key=lambda r: r["annualized_savings_brl"])
+    evaluated = [r for r in results if r["procurement_status"] == "evaluated"]
+    best = max(evaluated, key=lambda r: r["annualized_savings_brl"]) if evaluated else None
     decidable = [r for r in results if r["ci90_positive"]]
-    baseline = next((r for r in results if r["horizon_weeks"] == 1), None)
+    baseline = next((r for r in evaluated if r["horizon_weeks"] == 1), None)
     print()
-    print(f"melhor economia anualizada: h={best['horizon_weeks']}  R$ {best['annualized_savings_brl']:,.0f}")
-    if baseline and baseline["annualized_savings_brl"] > 0:
+    if best:
+        print(f"melhor economia anualizada: h={best['horizon_weeks']}  R$ {best['annualized_savings_brl']:,.0f}")
+    else:
+        print("sem comparacao economica: nenhuma janela completa elegivel")
+    if best and baseline and baseline["annualized_savings_brl"] > 0:
         ratio = best["annualized_savings_brl"] / baseline["annualized_savings_brl"]
         print(f"contra h=1               : {ratio:.2f}x")
     print(
@@ -189,11 +248,16 @@ def run(args: argparse.Namespace) -> dict[str, object]:
 
     payload: dict[str, object] = {
         "experiment": "B2_horizonte_maior",
+        "pipeline_version": "horizon-calendar-v2",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "window": args.window,
         "window_label": window_label,
         "holdout_reopened": args.window != "development",
         "n_weeks": int(len(panel)),
+        "n_observed_weeks": int(panel["price"].notna().sum()),
+        "n_missing_weeks": int(panel["price"].isna().sum()),
+        "start_index_calendar_weeks": args.start_index,
+        "min_train_observations": args.min_train,
         "period_start": str(panel["date"].min().date()),
         "period_end": str(panel["date"].max().date()),
         "policy": {
@@ -204,7 +268,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             "carrying_cost_scales_with_horizon": True,
         },
         "results": results,
-        "best_horizon": best["horizon_weeks"],
+        "best_horizon": best["horizon_weeks"] if best else None,
         "decidable_horizons": [r["horizon_weeks"] for r in decidable],
         "claim_boundary": (
             "replay historico de politica em janela de desenvolvimento; nao promove "
@@ -241,7 +305,7 @@ def main() -> int:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=ROOT / "reports" / "vs_epl_krls" / "s10_horizon",
+        default=ROOT / "reports" / "vs_epl_krls" / "s10_horizon_v2",
     )
     run(parser.parse_args())
     return 0
