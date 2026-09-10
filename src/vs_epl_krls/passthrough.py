@@ -245,6 +245,16 @@ def build_parity_panel(
     if (data["price"] <= 0).any() or (data["parity"] <= 0).any():
         raise ValueError("prices and parity must be strictly positive")
 
+    from .weekly import weekly_grid
+
+    data = weekly_grid(data)
+    return _parity_features(data, config=config, producer_lag=producer_lag)
+
+
+def _parity_features(
+    data: pd.DataFrame, *, config: PassThroughConfig, producer_lag: int
+) -> pd.DataFrame:
+    """Shared calendar-aligned features; all predictors use earlier rows."""
     log_price = np.log(data["price"])
     log_parity = np.log(data["parity"])
     previous_price = data["price"].shift(1)
@@ -276,6 +286,31 @@ def build_parity_panel(
     )
     panel["abs_cost_move"] = panel["rpar1"].abs()
     return panel
+
+
+def build_next_parity_row(
+    frame: pd.DataFrame, *, config: PassThroughConfig | None = None, producer_lag: int = 3
+) -> pd.Series:
+    """Build the unobserved next week with exactly the training feature logic.
+
+    No placeholder price or future cost is needed: the new row is all NaN,
+    and every predictor depends only on preceding observations.
+    """
+    from .weekly import weekly_grid
+
+    config = config or PassThroughConfig()
+    # Apply the same input validation as training before using the raw history.
+    panel = build_parity_panel(frame, config=config, producer_lag=producer_lag)
+    data = weekly_grid(frame)
+    origin_date = data["date"].iloc[-1]
+    if panel["date"].iloc[-1] != origin_date or pd.isna(data["price"].iloc[-1]):
+        raise ValueError("latest parity origin must have observed price and parity")
+    next_date = origin_date + pd.Timedelta(weeks=1)
+    future = pd.DataFrame({"date": [next_date]})
+    extended = pd.concat([data, future], ignore_index=True)
+    row = _parity_features(extended, config=config, producer_lag=producer_lag).iloc[-1].copy()
+    row["origin_date"] = origin_date
+    return row
 
 
 def _huber_irls(

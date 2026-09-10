@@ -27,7 +27,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from .metrics import regression_report
 from .model import VSEPLKRLS
 from .selection import S10Candidate, build_s10_feature_frame, build_s10_supervised
-from .utils import MinMaxScaler
+from .weekly import weekly_grid
 
 
 @dataclass(frozen=True)
@@ -170,11 +170,13 @@ class S10ResidualHybridShadow:
         return best
 
     def _causal_base_predictions(self, supervised) -> np.ndarray:
-        prices = self.history_["price"].to_numpy(float)
-        history_dates = self.history_["date"].to_numpy(dtype="datetime64[ns]")
+        calendar = weekly_grid(self.history_)
+        prices = calendar["price"].to_numpy(float)
+        history_dates = calendar["date"].to_numpy(dtype="datetime64[ns]")
         output = np.full(supervised.n_samples, np.nan, dtype=float)
         fitted = None
         last_fit_position = -10**9
+        previous_position = -1
         for index, origin_date in enumerate(supervised.dates):
             position = int(np.searchsorted(history_dates, origin_date, side="right") - 1)
             if position + 1 < self.min_arima_history:
@@ -185,12 +187,13 @@ class S10ResidualHybridShadow:
                     fitted = self._fit_arima(history)
                     last_fit_position = position
                 else:
-                    fitted = fitted.append([history[-1]], refit=False)
+                    fitted = fitted.append(prices[previous_position + 1 : position + 1], refit=False)
                 output[index] = float(np.asarray(fitted.forecast(steps=1)).ravel()[0])
             except (ValueError, RuntimeError, np.linalg.LinAlgError):
                 fitted = self._fit_arima(history)
                 last_fit_position = position
                 output[index] = float(np.asarray(fitted.forecast(steps=1)).ravel()[0])
+            previous_position = position
         return output
 
     def fit(self, history: pd.DataFrame) -> "S10ResidualHybridShadow":
@@ -202,7 +205,7 @@ class S10ResidualHybridShadow:
                 self.history_, horizon=1, feature_set=self.candidate.feature_set
             )
             self.feature_names_ = supervised.feature_names
-            self.x_scaler_ = MinMaxScaler().fit(supervised.x)
+            self.x_scaler_ = self.candidate.make_feature_scaler().fit(supervised.x)
             x_scaled = np.clip(self.x_scaler_.transform(supervised.x), 0.0, 1.0)
             base = self._causal_base_predictions(supervised)
             self.vs_model_ = VSEPLKRLS(**self.candidate.model_parameters())
@@ -216,7 +219,7 @@ class S10ResidualHybridShadow:
                 raise RuntimeError("insufficient causal residuals to fit shadow model")
             self.baseline_training_samples_ = learned
             self.arima_model_ = self._fit_arima(
-                self.history_["price"].to_numpy(float)
+                weekly_grid(self.history_)["price"].to_numpy(float)
             )
             self.data_fingerprint_ = self._data_fingerprint(self.history_)
             self.freeze_start_ = str(self.history_["date"].iloc[0].date())
@@ -236,6 +239,8 @@ class S10ResidualHybridShadow:
         feature_frame = build_s10_feature_frame(
             self.history_, feature_set=self.candidate.feature_set
         )
+        if feature_frame.empty or feature_frame["date"].iloc[-1] != self.history_["date"].iloc[-1]:
+            raise ValueError("latest week needs 13 consecutive observed weeks of features")
         raw = feature_frame[list(self.feature_names_)].iloc[-1].to_numpy(float)
         transformed = self.x_scaler_.transform(raw.reshape(1, -1))[0]
         scaled = np.clip(transformed, 0.0, 1.0)
@@ -342,7 +347,7 @@ class S10ResidualHybridShadow:
                 ignore_index=True,
             )
             self.arima_model_ = self._fit_arima(
-                self.history_["price"].to_numpy(float)
+                weekly_grid(self.history_)["price"].to_numpy(float)
             )
             self.data_fingerprint_ = self._data_fingerprint(self.history_)
             self.pending_forecast_ = None

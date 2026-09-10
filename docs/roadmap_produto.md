@@ -183,6 +183,42 @@ horizonte; o replay de política precisa de uma versão multi-semana.
 **Destrava:** muda o uso de "antecipar esta semana" para "planejar o trimestre", que é a
 conversa que o comprador realmente tem.
 
+#### Rodada de 09/09/2026 — replay multi-horizonte entregue, hipótese confirmada
+
+O replay de política deixou de ser 1-semana: `simulate_horizon_prebuy` replica a mesma
+política para qualquer `h`, e `simulate_one_week_prebuy` virou o caso `h=1` — os números de
+h=1 já publicados foram reconferidos e **não mudaram** (economia anualizada R$ 8.563,11,
+IC90 [116,50, 23.653,40], 9 disparos).
+
+Duas correções que o horizonte exige e que estão explícitas no código: antecipar `h` semanas
+paga **`h` semanas de carrego**, e o bootstrap usa blocos de no mínimo `h` semanas, porque
+decisões de horizonte `h` se sobrepõem e tratá-las como independentes estreitaria o IC90
+artificialmente.
+
+Medido em `scripts/33_s10_horizon_experiment.py`, walk-forward ARIMA na janela de
+desenvolvimento (598 semanas, holdout **não** reaberto), 200 mil L/mês:
+
+| h | decisões | MAE (× persistência) | disparos | precisão | economia/ano | IC90 |
+|---:|---:|---:|---:|---:|---:|---|
+| 1 | 196 | 0,0503 (0,98×) | 42 | 0,71 | R$ 9.285 | [3.289, 17.103] |
+| 2 | 194 | 0,0958 (0,99×) | 53 | 0,72 | R$ 16.101 | [6.426, 28.266] |
+| 4 | 190 | 0,1806 (1,00×) | 60 | 0,68 | R$ 26.024 | [11.265, 43.617] |
+| 8 | 182 | 0,3342 (0,99×) | 55 | 0,78 | R$ 49.830 | [18.892, 77.800] |
+| **12** | 174 | 0,4705 (0,97×) | 51 | **0,80** | **R$ 62.566** | [20.352, 107.508] |
+
+**h=12 rende 6,74× o h=1, com IC90 positivo em todos os horizontes.** Com carrego de
+R$ 0,002/L/semana o ganho cai para 6,46× e o IC90 continua positivo — o resultado não é
+artefato de ignorar custo de estoque.
+
+O detalhe que decide o próximo passo: **o MAE não melhora** (0,97–1,00× a persistência em
+todo horizonte), mas a **precisão do gatilho sobe de 0,71 para 0,80**. O ganho não vem de
+prever melhor o nível — vem de acertar mais a *direção* quando o movimento é grande o
+bastante para superar o limiar. É exatamente o argumento do C4: o sinal aproveitável está na
+dinâmica de médio prazo, não no nível de curto prazo.
+
+**Ressalva:** economia anualizada em horizontes longos vem de menos episódios independentes.
+Os IC90 são largos por isso, e a leitura honesta é "ordem de grandeza", não ponto.
+
 ### B3. Cenário de orçamento anual
 
 **Por quê:** a decisão semanal economiza ~0,1% do gasto. O orçamento anual **é** o gasto.

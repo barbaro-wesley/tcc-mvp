@@ -34,6 +34,7 @@ from .selection import (
     build_s10_supervised,
 )
 from .utils import MinMaxScaler
+from .weekly import weekly_grid
 
 
 PrimaryModel = Literal["ARIMA", "ensemble", "Ridge", "VS-ePL-KRLS", "persistencia"]
@@ -235,7 +236,7 @@ class S10ProductionForecaster:
                 feature_set=self.candidate.feature_set,
             )
             self.feature_names_ = supervised.feature_names
-            self.x_scaler_ = MinMaxScaler().fit(supervised.x)
+            self.x_scaler_ = self.candidate.make_feature_scaler().fit(supervised.x)
             x_scaled, _ = self._scaled_features(supervised.x)
             self.target_scaler_: MinMaxScaler | None = None
             if self.candidate.target_mode == "level":
@@ -247,7 +248,7 @@ class S10ProductionForecaster:
             self.vs_model_.fit(x_scaled, model_target)
             self.ridge_model_ = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
             self.ridge_model_.fit(supervised.x, supervised.target_price)
-            prices = self.history_["price"].to_numpy(float)
+            prices = weekly_grid(self.history_)["price"].to_numpy(float)
             self.arima_model_ = self._fit_arima(prices)
             self.data_fingerprint_ = self._fingerprint(self.history_)
             self.training_start_ = str(self.history_["date"].iloc[0].date())
@@ -270,6 +271,8 @@ class S10ProductionForecaster:
             self.history_,
             feature_set=self.candidate.feature_set,
         )
+        if frame.empty or frame["date"].iloc[-1] != self.history_["date"].iloc[-1]:
+            raise ValueError("latest week needs 13 consecutive observed weeks of features")
         return frame[list(self.feature_names_)].iloc[-1].to_numpy(float).reshape(1, -1)
 
     def _component_predictions(self) -> tuple[dict[str, float], float]:
@@ -409,6 +412,8 @@ class S10ProductionForecaster:
             if timestamp <= last_date:
                 raise ValueError("new observation date must be after the current history")
             cadence_days = int((timestamp - last_date).days)
+            if timestamp - last_date != pd.Timedelta(days=self.expected_frequency_days):
+                raise ValueError("new observation must match the forecast target date; missing week")
             prior_price = float(self.history_["price"].iloc[-1])
             if not allow_anomalous_change and abs(value - prior_price) > self._change_limit():
                 raise ValueError(
@@ -437,7 +442,7 @@ class S10ProductionForecaster:
                 feature_set=self.candidate.feature_set,
             )
             self.ridge_model_.fit(supervised.x, supervised.target_price)
-            self.arima_model_ = self._fit_arima(self.history_["price"].to_numpy(float))
+            self.arima_model_ = self._fit_arima(weekly_grid(self.history_)["price"].to_numpy(float))
             self.data_fingerprint_ = self._fingerprint(self.history_)
             self.training_end_ = str(timestamp.date())
             self.last_feature_clip_fraction_ = clip_fraction

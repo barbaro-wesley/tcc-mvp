@@ -1,8 +1,8 @@
 {
   "contract_version": "parity-1.0.0",
   "generated_from_panel": "data/processed/s10_causal_panel.csv",
-  "data_fingerprint": "240023cfe4796ba1e978678f4834f44d8fec5385b07c0a6210579aa459e61ff6",
-  "n_train": 650,
+  "data_fingerprint": "da37281c3e41c840839be9e6e4268361a0ce8b4943b650c4b8215dd3d9066138",
+  "n_train": 652,
   "features": [
     "dp1",
     "rpar1",
@@ -10,26 +10,26 @@
     "coint_par"
   ],
   "coefficients": {
-    "intercept": 0.00127306,
-    "dp1": 0.30830764,
-    "rpar1": 0.03940434,
-    "rpar2": 0.01720199,
-    "coint_par": -0.00020931
+    "intercept": 0.00040857,
+    "dp1": 0.31007819,
+    "rpar1": 0.03852888,
+    "rpar2": 0.01711951,
+    "coint_par": -0.00012103
   },
   "forecast": {
-    "origin_date": "2026-08-16",
-    "target_date": "2026-08-23",
-    "origin_price": 6.89,
-    "point": 6.912116,
-    "delta": 0.022116,
-    "lower": 6.838977,
-    "upper": 6.989709,
+    "origin_date": "2026-08-30",
+    "target_date": "2026-09-06",
+    "origin_price": 6.88,
+    "point": 6.880038,
+    "delta": 3.8e-05,
+    "lower": 6.844888,
+    "upper": 6.918044,
     "nominal_coverage": 0.8,
-    "conditional_sigma": 0.076397,
+    "conditional_sigma": 0.038541,
     "fallback_used": false,
     "reason": "",
-    "fixed_quantile_lower": 6.830971,
-    "fixed_quantile_upper": 7.007817,
+    "fixed_quantile_lower": 6.838273,
+    "fixed_quantile_upper": 6.928029,
     "interval_method": "adaptive_conformal_normalized"
   },
   "interval_calibration": {
@@ -37,45 +37,45 @@
     "calibration_weeks": 156,
     "fixed_quantile": {
       "nominal_coverage": 0.8,
-      "empirical_coverage": 0.9038461538461539,
-      "calibration_error": 0.10384615384615381,
-      "mean_width": 0.08582020580763346,
+      "empirical_coverage": 0.9102564102564102,
+      "calibration_error": 0.1102564102564102,
+      "mean_width": 0.0860749615059774,
       "median_width": 0.0747731261369089,
-      "mean_winkler": 0.15668765757981773,
+      "mean_winkler": 0.15464686853468568,
       "n": 156
     },
     "adaptive_conformal": {
       "nominal_coverage": 0.8,
-      "empirical_coverage": 0.7884615384615384,
-      "calibration_error": -0.011538461538461608,
-      "mean_width": 0.06914539727286616,
-      "median_width": 0.05249208836043895,
-      "mean_winkler": 0.1524826163188592,
+      "empirical_coverage": 0.7948717948717948,
+      "calibration_error": -0.005128205128205221,
+      "mean_width": 0.06679411563569265,
+      "median_width": 0.050881839290336295,
+      "mean_winkler": 0.15036668001448789,
       "n": 156
     },
-    "winkler_improvement": 0.004205,
-    "width_reduction_fraction": 0.194299,
+    "winkler_improvement": 0.00428,
+    "width_reduction_fraction": 0.224001,
     "state": {
       "nominal_coverage": 0.8,
       "alpha_target": 0.19999999999999996,
-      "alpha_current": 0.16399999999999992,
+      "alpha_current": 0.18399999999999994,
       "gamma": 0.02,
       "residuals_in_window": 156,
       "updates": 156,
-      "covered": 123,
+      "covered": 124,
       "clipped_steps": 0,
       "warmed_up": true,
-      "running_coverage": 0.7884615384615384
+      "running_coverage": 0.7948717948717948
     }
   },
   "decision": {
     "policy": "antecipar 25% de uma semana quando a alta prevista supera R$ 0,01/L",
     "signal_threshold_brl_per_liter": 0.01,
-    "expected_change_brl_per_liter": 0.022116,
-    "recommend_prebuy": true,
-    "liters_if_triggered": 11538.5,
-    "expected_saving_brl": 255.19
+    "expected_change_brl_per_liter": 3.8e-05,
+    "recommend_prebuy": false,
+    "liters_if_triggered": 0.0,
+    "expected_saving_brl": 0.0
   },
-  "artifact_sha256": "ee695c540ce2609c76de5ca6ee2bfabc19662a1b647d4933e4bd6a733b001cd4",
-  "artifact_bytes": 47607
+  "artifact_sha256": "5ee50a8406279afae7d10ae978676807a4b2d9a39c286be2d5df27bd08d10a04",
+  "artifact_bytes": 47231
 }

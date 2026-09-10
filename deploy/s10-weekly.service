@@ -1,0 +1,40 @@
+# Atualizacao semanal do S10.  Instalar junto com s10-weekly.timer:
+#
+#   sudo cp deploy/s10-weekly.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now s10-weekly.timer
+#
+# Ajuste User, WorkingDirectory e o caminho do venv para o seu servidor.
+
+[Unit]
+Description=Atualizacao semanal S10 (fontes ANP/IPEA/BCB, painel causal, previsoes, ledgers)
+Documentation=file:///opt/s10/README.md
+# Sem rede o primeiro passo falha de qualquer forma; melhor nem comecar.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=s10
+Group=s10
+WorkingDirectory=/opt/s10
+ExecStart=/opt/s10/.venv/bin/python scripts/weekly_refresh.py --json
+
+# O pipeline leva ~2 min; 30 min cobre lentidao da ANP com folga larga.
+TimeoutStartSec=1800
+
+# O job escreve em data/ e reports/; o resto do disco fica somente leitura.
+ProtectSystem=strict
+ReadWritePaths=/opt/s10/data /opt/s10/reports /opt/s10/artifacts
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

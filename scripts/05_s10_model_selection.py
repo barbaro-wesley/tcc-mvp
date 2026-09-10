@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -28,7 +29,7 @@ from sklearn.preprocessing import StandardScaler
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from benchmarks.classical import arima_forecast
+from vs_epl_krls.production import S10ProductionForecaster
 from eval.metrics import diebold_mariano
 from vs_epl_krls import load_anp_fuel_csv, regression_report
 from vs_epl_krls.selection import (
@@ -47,7 +48,7 @@ def _ridge_holdout(data, start: int, end: int, refit_every: int = 13) -> np.ndar
     for output_index, origin in enumerate(range(start, end)):
         # At origin ``t`` the label created at ``t-h`` has just become known.
         # Include it while keeping every later label unavailable.
-        train_end = origin - data.horizon + 1
+        train_end = data.known_target_end(origin)
         if train_end < 40:
             continue
         if model is None or origin - last_fit >= refit_every:
@@ -58,19 +59,25 @@ def _ridge_holdout(data, start: int, end: int, refit_every: int = 13) -> np.ndar
     return predictions
 
 
-def _arima_holdout(data, start: int, end: int, refit_every: int = 13) -> np.ndarray:
+def _arima_holdout(data, start: int, end: int, refit_every: int = 1) -> np.ndarray:
     predictions = np.full(end - start, np.nan)
     model = None
     last_fit = -10**9
+    last_history_size = 0
     for output_index, origin in enumerate(range(start, end)):
-        history = data.origin_price[: origin + 1]
+        history = (
+            data.price_history.loc[data.price_history["date"] <= pd.Timestamp(data.dates[origin]), "price"].to_numpy(float)
+            if data.price_history is not None else data.origin_price[: origin + 1]
+        )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
             if model is None or origin - last_fit >= refit_every:
-                forecast, model = arima_forecast(history, steps=data.horizon, model=None)
+                model = S10ProductionForecaster._fit_arima(history)
                 last_fit = origin
             else:
-                forecast, model = arima_forecast(history, steps=data.horizon, model=model)
+                model = model.append(history[last_history_size:], refit=False)
+            forecast = np.asarray(model.forecast(steps=data.horizon))
+            last_history_size = len(history)
         predictions[output_index] = float(forecast[-1])
     return predictions
 
@@ -114,7 +121,7 @@ def _metric_row(
 
 
 def _convex_weights(actual: np.ndarray, predictions: np.ndarray, resolution: int = 20) -> np.ndarray:
-    """Deterministic non-negative stacking weights selected by validation RMSE."""
+    """Non-negative stacking weights fitted by development MAE."""
 
     if predictions.ndim != 2 or predictions.shape[0] != actual.size:
         raise ValueError("stacking predictions have an incompatible shape")
@@ -133,8 +140,7 @@ def _convex_weights(actual: np.ndarray, predictions: np.ndarray, resolution: int
     for integer_weights in partitions(resolution, predictions.shape[1]):
         weights = np.asarray(integer_weights, dtype=float) / resolution
         residual = actual - predictions @ weights
-        # A small MAE term discourages a solution driven by one extreme week.
-        loss = float(np.mean(residual**2) + 0.05 * np.mean(np.abs(residual)) ** 2)
+        loss = float(np.mean(np.abs(residual)))
         if loss < best_loss:
             best_loss = loss
             best_weights = weights
@@ -221,7 +227,21 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         horizon=args.horizon,
         random_state=args.random_state,
         n_random=args.n_random,
+        feature_scaling=getattr(args, "feature_scaling", "robust_bounded"),
     )
+    digest = hashlib.sha256()
+    digest.update(s10.loc[s10["date"] < pd.Timestamp(pinned.holdout_start_date), ["date", "price"]].to_csv(index=False).encode())
+    for feature_set, data in datasets.items():
+        digest.update(feature_set.encode())
+        for values in (data.x, data.target_price, data.dates, data.target_dates):
+            digest.update(values[:holdout.validation_start].tobytes())
+    digest.update(json.dumps([asdict(c) for c in candidates], sort_keys=True).encode())
+    digest.update(json.dumps([asdict(f) for f in folds], sort_keys=True).encode())
+    for source in sorted((ROOT / "src" / "vs_epl_krls").glob("*.py")):
+        digest.update(source.name.encode())
+        digest.update(source.read_bytes())
+    digest.update(Path(__file__).read_bytes())
+    validation_fingerprint = digest.hexdigest()
     started = time.perf_counter()
     ranking_path = args.output_dir / f"validation_ranking_h{args.horizon}.csv"
     manifest_path = args.output_dir / f"selection_manifest_h{args.horizon}.json"
@@ -230,6 +250,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     ranking_reused = bool(args.reuse_validation and ranking_path.is_file())
     if ranking_reused:
+        if previous_manifest.get("validation_fingerprint") != validation_fingerprint:
+            raise ValueError("cached validation has different data, code or configuration; rerun without --reuse-validation")
         ranking = pd.read_csv(ranking_path)
         frozen_id = str(ranking.iloc[0]["candidate_id"])
         frozen_candidate = next(
@@ -283,7 +305,31 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         + [
             _metric_row("ensemble", oof_actual, oof_ensemble, oof_matrix[:, 2], horizon=args.horizon)
         ]
-    ).sort_values("rmse", ignore_index=True)
+    ).sort_values("mae", ignore_index=True)
+
+    if not getattr(args, "evaluate_holdout", False):
+        ranking.drop(columns=["candidate"], errors="ignore").to_csv(ranking_path, index=False)
+        pd.DataFrame([r.summary_row() for r in fold_results]).to_csv(
+            args.output_dir / f"validation_folds_h{args.horizon}.csv", index=False
+        )
+        validation_comparison.to_csv(
+            args.output_dir / f"validation_baselines_h{args.horizon}.csv", index=False
+        )
+        development_manifest = {
+            "pipeline_version": "calendar-mae-v2",
+            "holdout_evaluated": False,
+            "horizon_weeks": args.horizon,
+            "validation_fingerprint": validation_fingerprint,
+            "validation_folds": [asdict(f) for f in folds],
+            "champion_selected_without_holdout": asdict(champion),
+            "validation_comparison": validation_comparison.to_dict(orient="records"),
+            "selection_metric": "mae_ratio",
+            "candidate_search_seconds": selection_seconds,
+            "n_candidates_ranked": len(ranking),
+            "ensemble_evidence": "weights fitted on these folds; requires independent validation",
+        }
+        manifest_path.write_text(json.dumps(development_manifest, indent=2, default=str), encoding="utf-8")
+        return development_manifest
 
     holdout_result = evaluate_temporal_fold(champion, champion_data, holdout)
 
@@ -424,6 +470,9 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         index=False,
     )
     manifest: dict[str, object] = {
+        "pipeline_version": "calendar-mae-v2",
+        "holdout_evaluated": True,
+        "validation_fingerprint": validation_fingerprint,
         "scope": "ANP weekly national resale price — Diesel B S10 only",
         "horizon_weeks": args.horizon,
         "data_start": str(pd.Timestamp(s10["date"].min()).date()),
@@ -473,12 +522,14 @@ def main() -> int:
     parser.add_argument("--validation-size", type=int, default=52)
     parser.add_argument("--n-folds", type=int, default=3)
     parser.add_argument("--min-train-size", type=int, default=156)
+    parser.add_argument("--feature-scaling", choices=["minmax", "robust_bounded"], default="robust_bounded")
+    parser.add_argument("--evaluate-holdout", action="store_true", help="explicitly evaluate the already-used holdout; default is development only")
     parser.add_argument(
         "--reuse-validation",
         action="store_true",
         help="reusa ranking existente e recalcula apenas o campeão congelado",
     )
-    parser.add_argument("--output-dir", type=Path, default=ROOT / "reports" / "vs_epl_krls" / "s10_selection")
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "reports" / "vs_epl_krls" / "s10_selection_v2")
     args = parser.parse_args()
     manifest = run(args)
     print(json.dumps(manifest, indent=2, ensure_ascii=False, default=str))

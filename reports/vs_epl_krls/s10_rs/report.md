@@ -11,7 +11,7 @@ estrutura de distribuicao diferentes em cada uma. A distancia entre a serie
 modelada e a serie que o cliente enfrenta era a maior fragilidade comercial do
 projeto — e ela nao se resolve com modelo melhor, se resolve com o dado certo.
 
-A ANP publica a mesma pesquisa por estado: 702 semanas para o RS, mediana de 262 postos por semana.
+A ANP publica a mesma pesquisa por estado: 704 semanas para o RS, mediana de 261 postos por semana.
 
 ## A decomposicao, e a evidencia que a escolheu
 
@@ -58,28 +58,28 @@ Para um comprador de 200,000 L/mes no RS:
 
 | fonte de valor | R$/ano |
 |---|---:|
-| erro de orcamento por usar a serie nacional | **336,000** |
+| erro de orcamento por usar a serie nacional | **357,692** |
 | economia da politica de antecipacao | 15,631 |
 
-Usar a base errada custa **21.5x** o que o gatilho
+Usar a base errada custa **22.9x** o que o gatilho
 semanal economiza. O produto estadual nao se vende pela previsao: vende-se por
 entregar a serie que o cliente efetivamente enfrenta. Hoje o preco gaucho esta
-4.5% abaixo do nacional; quem
+4.8% abaixo do nacional; quem
 orca pela media do pais erra para cima nessa proporcao.
 
 ## A posicao de hoje
 
-O spread esta em R$ -0.3100/L, z = -2.96, percentil 0.6% de 702 semanas.
+O spread esta em R$ -0.3300/L, z = -3.12, percentil 0.4% de 704 semanas.
 
 | faixa | limiar | semanas | episodios independentes | variacao 12s depois | positiva em |
 |---|---|---|---|---|---|
-| q2% | -0.260000 | 15 | 3 | 0.139000 | 1.000000 |
-| q5% | -0.210000 | 38 | 3 | 0.093741 | 0.888889 |
-| q10% | -0.150900 | 71 | 6 | 0.059475 | 0.779661 |
+| q2% | -0.274700 | 15 | 3 | 0.142000 | 1.000000 |
+| q5% | -0.212550 | 36 | 4 | 0.100875 | 0.916667 |
+| q10% | -0.151700 | 71 | 6 | 0.054542 | 0.745763 |
 
 **Leia a coluna de episodios antes da de semanas.** Um spread extremo dura meses:
-das 7 semanas ja vistas no nivel de hoje, a maioria e o
-episodio corrente, e sobram 2 precedentes
+das 5 semanas ja vistas no nivel de hoje, a maioria e o
+episodio corrente, e sobram 1 precedentes
 de verdade. A direcao da reversao e sustentada nas faixas com mais episodios (78% a
 89% de altas em 3 a 6 episodios distintos); a **magnitude** no extremo atual repousa
 sobre pouquissimos casos e nao deve ser tratada como previsao.

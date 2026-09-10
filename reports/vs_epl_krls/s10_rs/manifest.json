@@ -21,8 +21,35 @@
   ],
   "provenance": {
     "uf": "RS",
-    "offline": true,
-    "sources": []
+    "region": "sul",
+    "n_weeks": 704,
+    "coverage": {
+      "start": "2012-12-30",
+      "end": "2026-08-30"
+    },
+    "median_stations": 261.0,
+    "sources": [
+      {
+        "name": "anp_estado_rs",
+        "url": "https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/precos-revenda-e-de-distribuicao-combustiveis/shlp/semanal/semanal-estados-desde-2013.xlsx",
+        "sha256": "d8ec592cda23cb4ca0f05a2cd17e20a1e4b8049ba6a70f7b3cf7c316326ae909",
+        "n_bytes": 12537532,
+        "fetched_at": "2026-09-09T22:29:07+00:00",
+        "rows": 704,
+        "coverage_start": "2012-12-30",
+        "coverage_end": "2026-08-30"
+      },
+      {
+        "name": "anp_producer_sul",
+        "url": "https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/ppidp/precos-medios-ponderados-semanais-2013.xls",
+        "sha256": "f24394738aa403faf9ec588afbabf614e774b7d0016ff1fb4a8d69a52a416c73",
+        "n_bytes": 2015232,
+        "fetched_at": "2026-09-09T22:29:13+00:00",
+        "rows": 713,
+        "coverage_start": "2012-12-31",
+        "coverage_end": "2026-08-24"
+      }
+    ]
   },
   "models": [
     "persistencia",
@@ -192,59 +219,64 @@
     "fitted": true,
     "n_train": 490,
     "reversion_kappa": 0.067725,
+    "reversion_kappa_local": 0.067725,
+    "reversion_kappa_se": 0.016414,
+    "pooled_kappa": null,
+    "pooling_weight": 1.0,
     "half_life_weeks": 9.88,
     "target_mean": -0.067037,
     "anchor_weight": -0.010183,
     "residual_sigma": 0.027244,
-    "uses_producer_anchor": true
+    "uses_producer_anchor": true,
+    "weighted_by_stations": false
   },
   "current_state": {
-    "date": "2026-08-16",
-    "state_price": 6.58,
-    "national_price": 6.89,
-    "spread": -0.3099999999999996,
-    "spread_z": -2.955021563579854
+    "date": "2026-08-30",
+    "state_price": 6.55,
+    "national_price": 6.88,
+    "spread": -0.33,
+    "spread_z": -3.1204517238165046
   },
   "spread_opportunity": {
     "available": true,
-    "n_weeks": 702,
+    "n_weeks": 704,
     "horizon_weeks": 12,
-    "current_spread": -0.3099999999999996,
-    "current_z": -2.955021563579854,
-    "current_percentile": 0.005698005698005698,
-    "weeks_at_current_level": 7,
-    "independent_episodes_at_current_level": 3,
+    "current_spread": -0.33,
+    "current_z": -3.1204517238165046,
+    "current_percentile": 0.004261363636363636,
+    "weeks_at_current_level": 5,
+    "independent_episodes_at_current_level": 2,
     "levels": [
       {
         "quantile": 0.02,
-        "threshold": -0.2600000000000007,
+        "threshold": -0.27469999999999944,
         "weeks": 15,
         "independent_episodes": 3,
-        "mean_change_after_horizon": 0.13900000000000023,
+        "mean_change_after_horizon": 0.14200000000000004,
         "share_positive": 1.0
       },
       {
         "quantile": 0.05,
-        "threshold": -0.2099999999999999,
-        "weeks": 38,
-        "independent_episodes": 3,
-        "mean_change_after_horizon": 0.09374074074074079,
-        "share_positive": 0.8888888888888888
+        "threshold": -0.21255000000000013,
+        "weeks": 36,
+        "independent_episodes": 4,
+        "mean_change_after_horizon": 0.10087500000000005,
+        "share_positive": 0.9166666666666666
       },
       {
         "quantile": 0.1,
-        "threshold": -0.15089999999999984,
+        "threshold": -0.15170000000000003,
         "weeks": 71,
         "independent_episodes": 6,
-        "mean_change_after_horizon": 0.05947457627118646,
-        "share_positive": 0.7796610169491526
+        "mean_change_after_horizon": 0.05454237288135598,
+        "share_positive": 0.7457627118644068
       }
     ]
   },
   "basis_error": {
     "window_weeks": 52,
-    "mean_absolute_spread_brl_per_liter": 0.13999999999999996,
+    "mean_absolute_spread_brl_per_liter": 0.14903846153846148,
     "monthly_liters": 200000.0,
-    "annual_budget_error_brl": 335999.9999999999
+    "annual_budget_error_brl": 357692.3076923076
   }
 }

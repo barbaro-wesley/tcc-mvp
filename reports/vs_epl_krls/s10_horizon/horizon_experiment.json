@@ -1,0 +1,93 @@
+{
+  "experiment": "B2_horizonte_maior",
+  "generated_at_utc": "2026-09-09T23:49:17.934916+00:00",
+  "window": "development",
+  "window_label": "desenvolvimento (< 2024-08-18)",
+  "holdout_reopened": false,
+  "n_weeks": 598,
+  "period_start": "2012-12-30",
+  "period_end": "2024-08-11",
+  "policy": {
+    "monthly_liters": 200000.0,
+    "flexibility_fraction": 0.25,
+    "signal_threshold_brl_per_liter": 0.01,
+    "carrying_cost_brl_per_liter_week": 0.0,
+    "carrying_cost_scales_with_horizon": true
+  },
+  "results": [
+    {
+      "horizon_weeks": 1,
+      "n_decisions": 196,
+      "mae": 0.050285270472033024,
+      "persistence_mae": 0.05129441624365481,
+      "mae_ratio_vs_persistence": 0.9803264010876307,
+      "triggered_prebuys": 42,
+      "trigger_precision": 0.7142857142857143,
+      "annualized_savings_brl": 9284.69387755102,
+      "annualized_savings_ci90_low": 3288.8265306122407,
+      "annualized_savings_ci90_high": 17103.061224489797,
+      "ci90_positive": true
+    },
+    {
+      "horizon_weeks": 2,
+      "n_decisions": 194,
+      "mae": 0.09575369326146704,
+      "persistence_mae": 0.09678571428571427,
+      "mae_ratio_vs_persistence": 0.9893370521479992,
+      "triggered_prebuys": 53,
+      "trigger_precision": 0.7169811320754716,
+      "annualized_savings_brl": 16101.030927835049,
+      "annualized_savings_ci90_low": 6426.494845360816,
+      "annualized_savings_ci90_high": 28265.721649484523,
+      "ci90_positive": true
+    },
+    {
+      "horizon_weeks": 4,
+      "n_decisions": 190,
+      "mae": 0.18061825432596473,
+      "persistence_mae": 0.18106185567010308,
+      "mae_ratio_vs_persistence": 0.9975500011170404,
+      "triggered_prebuys": 60,
+      "trigger_precision": 0.6833333333333333,
+      "annualized_savings_brl": 26024.21052631578,
+      "annualized_savings_ci90_low": 11264.526315789459,
+      "annualized_savings_ci90_high": 43617.47368421051,
+      "ci90_positive": true
+    },
+    {
+      "horizon_weeks": 8,
+      "n_decisions": 182,
+      "mae": 0.3341883189867373,
+      "persistence_mae": 0.3392157894736842,
+      "mae_ratio_vs_persistence": 0.9851791377555056,
+      "triggered_prebuys": 55,
+      "trigger_precision": 0.7818181818181819,
+      "annualized_savings_brl": 49829.67032967032,
+      "annualized_savings_ci90_low": 18892.252747252736,
+      "annualized_savings_ci90_high": 77800.21978021978,
+      "ci90_positive": true
+    },
+    {
+      "horizon_weeks": 12,
+      "n_decisions": 174,
+      "mae": 0.47045222070580617,
+      "persistence_mae": 0.48374193548387096,
+      "mae_ratio_vs_persistence": 0.9725272633955716,
+      "triggered_prebuys": 51,
+      "trigger_precision": 0.803921568627451,
+      "annualized_savings_brl": 62565.51724137929,
+      "annualized_savings_ci90_low": 20352.068965517246,
+      "annualized_savings_ci90_high": 107508.27586206894,
+      "ci90_positive": true
+    }
+  ],
+  "best_horizon": 12,
+  "decidable_horizons": [
+    1,
+    2,
+    4,
+    8,
+    12
+  ],
+  "claim_boundary": "replay historico de politica em janela de desenvolvimento; nao promove modelo, nao reabre o holdout congelado e nao garante economia futura"
+}

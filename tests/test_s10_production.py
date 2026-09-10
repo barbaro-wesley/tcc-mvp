@@ -108,11 +108,13 @@ def test_online_update_changes_fingerprint_and_rejects_bad_updates(bundle):
 
 def test_health_reports_cadence_and_capacity_pressure(bundle):
     next_date = pd.Timestamp(bundle.training_end_) + pd.Timedelta(days=14)
-    bundle.update_one(next_date, float(bundle.history_["price"].iloc[-1]))
+    before = bundle.data_fingerprint_
+    with pytest.raises(ValueError, match="target date"):
+        bundle.update_one(next_date, float(bundle.history_["price"].iloc[-1]))
+    assert bundle.data_fingerprint_ == before
     health = bundle.health()
     assert health.status == "warning"
-    assert health.last_cadence_days == 14
-    assert "unexpected_observation_cadence" in health.warnings
+    assert health.last_cadence_days == 7
     assert "beta_floor_pressure" in health.warnings
     assert 0 <= health.rule_capacity_fraction <= 1
     assert 0 <= health.dictionary_capacity_fraction <= 1

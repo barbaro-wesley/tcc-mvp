@@ -1,0 +1,15 @@
+# Alternativa ao systemd, para VPS onde cron ja e o padrao.
+# Instalar com:  crontab -e   (como o usuario dono de /opt/s10)
+#
+# Cron nao carrega o profile do usuario: use sempre caminhos absolutos, tanto
+# para o interpretador do venv quanto para o repositorio.  Chamar o python do
+# venv diretamente dispensa "activate".
+
+SHELL=/bin/sh
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=voce@exemplo.com
+
+# Quarta, 08:00 -- a ANP publica a revenda as tercas.
+# O flock evita que uma execucao lenta se sobreponha a proxima; sem ele, duas
+# instancias poderiam escrever no mesmo ledger ao mesmo tempo.
+0 8 * * 3 cd /opt/s10 && /usr/bin/flock -n /tmp/s10-weekly.lock /opt/s10/.venv/bin/python scripts/weekly_refresh.py --json >> /var/log/s10/weekly.log 2>&1

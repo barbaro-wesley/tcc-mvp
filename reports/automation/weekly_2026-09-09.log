@@ -1,0 +1,406 @@
+﻿2026-09-09 19:14:06  inicio da atualizacao semanal
+2026-09-09 19:14:06  download pulado (-SkipDownload)
+2026-09-09 19:14:06  ==> ingestao causal e painel (21_s10_ingest_causal.py)
+revenda: 705 semanas, 2012-12-30 a 2026-08-30
+baixando fontes causais...
+
+painel: 705 semanas, 2012-12-30 a 2026-08-30
+
+fontes:
+  ulsd             3944 linhas  2011-01-03 .. 2026-09-09  sha256 5aa6e4e82b29…
+  brent           11751 linhas  1987-05-20 .. 2026-09-01  sha256 b454952d7e44…
+  usdbrl          10446 linhas  1985-01-02 .. 2026-09-09  sha256 313cc1b0a331…
+  anp_producer      713 linhas  2012-12-30 .. 2026-08-23  sha256 f24394738aa4…
+
+cobertura por coluna:
+  ulsd             705/705
+  brent            705/705
+  usdbrl           705/705
+  producer_price   704/705
+  parity           705/705
+
+gravado: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\processed\s10_causal_panel.csv
+manifesto: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\processed\s10_causal_panel_manifest.json
+2026-09-09 19:14:24  ok ingestao causal e painel (17.9s)
+2026-09-09 19:14:24  ==> previsao nacional (paridade) (23_s10_parity_production.py)
+treino: 652 semanas ate 2026-08-30
+coeficientes:
+  intercept    +0.000409
+  dp1          +0.310078
+  rpar1        +0.038529
+  rpar2        +0.017120
+  coint_par    -0.000121
+
+origem  2026-08-30  R$ 6.8800/L
+alvo    2026-09-06
+ponto   R$ 6.8800/L  (variacao +0.0000)
+P10-P90 R$ 6.8449 a 6.9180/L (adaptive_conformal_normalized)
+  quantil fixo   cobertura 0.910 largura 0.0861 winkler 0.1546
+  conformal      cobertura 0.795 largura 0.0668 winkler 0.1504
+  banda +22.4% mais estreita em 156 semanas de calibracao
+fallback: False  
+
+decisao: NAO ANTECIPAR (200,000 L/mes)
+
+artefato C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\artifacts\s10_parity.joblib
+sha256   5ee50a8406279afae7d10ae978676807a4b2d9a39c286be2d5df27bd08d10a04
+
+ledger: previsao identica ja registrada para esta semana-alvo
+ledger   C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_parity\parity_ledger.jsonl
+registros 3, head fe4394b1a8f5be5d
+contagem prospectiva: 1/26 semanas liquidadas
+2026-09-09 19:14:30  ok previsao nacional (paridade) (5.9s)
+2026-09-09 19:14:30  ==> serie estadual RS (26_s10_rs_regional.py)
+painel RS: 704 semanas, 2012-12-30 a 2026-08-30
+postos pesquisados: mediana 261
+janela congelada: desenvolvimento ate 2024-08-11; o holdout nao e lido
+
+                modelo      mae  mae_quiet  mae_event  directional_accuracy  net_savings_brl  triggered  precision
+          persistencia 0.059731   0.008536   0.100333              0.000000         0.000000          0        NaN
+             rs_direto 0.059437   0.017566   0.092645              0.652174     38088.461538         56   0.517857
+      nacional+carrego 0.057541   0.019326   0.087849              0.659420     43015.384615         53   0.584906
+       nacional+spread 0.057294   0.019832   0.087005              0.695652     46292.307692         60   0.600000
+nacional+spread+ancora 0.057403   0.021652   0.085757              0.688406     46892.307692         59   0.593220
+
+melhor MAE: nacional+spread
+
+MAE contra o modelo aplicado direto ao estado (bootstrap pareado em blocos):
+  persistencia             +0.000294 IC90 [-0.002186, +0.002814] -> sem ganho decidivel
+  nacional+carrego         -0.001896 IC90 [-0.005701, +0.001806] -> sem ganho decidivel
+  nacional+spread          -0.002144 IC90 [-0.005912, +0.001510] -> sem ganho decidivel
+  nacional+spread+ancora   -0.002035 IC90 [-0.006062, +0.001831] -> sem ganho decidivel
+
+spread ajustado ate o fim do desenvolvimento: {"fitted": true, "n_train": 490, "reversion_kappa": 0.067725, "reversion_kappa_local": 0.067725, "reversion_kappa_se": 0.016414, "pooled_kappa": null, "pooling_weight": 1.0, "half_life_weeks": 9.88, "target_mean": -0.067037, "anchor_weight": -0.010183, "residual_sigma": 0.027244, "uses_producer_anchor": true, "weighted_by_stations": false}
+spread corrente -0.3300 (z = -3.12); preco RS R$ 6.5500/L contra nacional R$ 6.8800/L
+  percentil 0.4% de 704 semanas; 5 semanas nesse nivel em 2 episodio(s) independente(s)
+    q2% (<= -0.2747):  15 semanas em 3 episodios; 12s depois +0.1420, positiva em 100%
+    q5% (<= -0.2126):  36 semanas em 4 episodios; 12s depois +0.1009, positiva em 92%
+    q10% (<= -0.1517):  71 semanas em 6 episodios; 12s depois +0.0545, positiva em 75%
+
+erro de base nas ultimas 52 semanas: R$ 0.1490/L -> R$ 357,692/ano para 200,000 L/mes
+
+gravado em C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_rs
+2026-09-09 19:15:57  ok serie estadual RS (87.2s)
+2026-09-09 19:15:57  ==> previsao estadual (RS) (27_s10_rs_production.py)
+RS: treino com 703 semanas ate 2026-08-30
+modelo de spread: {"fitted": true, "n_train": 703, "reversion_kappa": 0.031751, "reversion_kappa_local": 0.031751, "reversion_kappa_se": 0.010394, "pooled_kappa": null, "pooling_weight": 1.0, "half_life_weeks": 21.48, "target_mean": -0.046936, "anchor_weight": 0.0, "residual_sigma": 0.02623, "uses_producer_anchor": false, "weighted_by_stations": false}
+
+origem  2026-08-30  R$ 6.5500/L
+alvo    2026-09-06
+nacional R$ 6.8800/L  +  spread R$ -0.3210/L
+ponto   R$ 6.5590/L  (variacao +0.0090)
+P10-P90 R$ 6.5053 a 6.6095/L (adaptive_conformal)
+  cobertura calibrada 76.9% em 156 semanas
+
+decisao: AGUARDAR (200,000 L/mes)
+
+base: RS R$ 6.5500/L contra nacional R$ 6.8800/L (-4.80%)
+  erro de orcamento por usar a serie nacional: R$ 0.1490/L -> R$ 357,692/ano
+  spread no percentil 0.4% de 704 semanas (z = -3.12)
+
+ledger: previsao identica ja registrada para esta semana-alvo
+artefato C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\artifacts\s10_rs.joblib
+sha256   1ab702382848025e7f3b0d744d6cede722ad8a8f3138858403ff4b159c9cd215
+ledger   C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_rs\rs_ledger.jsonl
+registros 3, head 73f6b441dafab043
+contagem prospectiva: 1/26 semanas liquidadas
+2026-09-09 19:16:04  ok previsao estadual (RS) (6.7s)
+2026-09-09 19:16:04  ==> revisao dos ledgers (29_s10_ledger_review.py)
+OK paridade
+     1/26 semanas liquidadas, 2 previsao(oes) registrada(s)
+     pendente: 2026-09-06 (0 semana(s))
+     cobertura 100.0%
+     MAE 0.0321 contra 0.0100 da persistencia
+OK regional_rs
+     1/26 semanas liquidadas, 2 previsao(oes) registrada(s)
+     pendente: 2026-09-06 (0 semana(s))
+     cobertura 100.0%
+     MAE 0.0410 contra 0.0100 da persistencia
+2026-09-09 19:16:09  ok revisao dos ledgers (5.2s)
+2026-09-09 19:16:09  atualizacao semanal concluida com sucesso
+2026-09-09 19:17:01  inicio da atualizacao semanal
+2026-09-09 19:17:01  ==> download das fontes ANP/IPEA/BCB (01_download.py)
+Arquivos baixados:
+  mensal_2013: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\anp_mensal_desde_2013.xlsx
+  mensal_2001: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\anp_mensal_2001_2012.xlsx
+  semanal_2013: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\anp_semanal_desde_2013.xlsx
+  ulsd: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\stooq_ulsd.csv
+  brent: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\ipeadata_brent.json
+  fx: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\ipeadata_usdbrl.json
+
+Gate Tabela 1 (S10 mensal dez/2012-mai/2020):
+  ok = True
+  n        obs=90  art=90  diff=0
+  mean     obs=3.1139  art=3.114  diff=-0.0001
+  std      obs=0.4532  art=0.453  diff=0.0002
+  min      obs=2.2260  art=2.226  diff=0.0000
+  q1       obs=2.6583  art=2.658  diff=0.0003
+  median   obs=3.1515  art=3.152  diff=-0.0005
+  q3       obs=3.5050  art=3.505  diff=0.0000
+  max      obs=3.8560  art=3.856  diff=0.0000
+
+Mensal completo: 164 linhas
+Semanal completo: 705 linhas
+Janela artigo: 90 linhas
+2026-09-09 19:17:12  ok download das fontes ANP/IPEA/BCB (10.4s)
+2026-09-09 19:17:12  ==> ingestao causal e painel (21_s10_ingest_causal.py)
+revenda: 705 semanas, 2012-12-30 a 2026-08-30
+baixando fontes causais...
+
+painel: 705 semanas, 2012-12-30 a 2026-08-30
+
+fontes:
+  ulsd             3944 linhas  2011-01-03 .. 2026-09-09  sha256 b24449af321bà
+  brent           11751 linhas  1987-05-20 .. 2026-09-01  sha256 b454952d7e44à
+  usdbrl          10446 linhas  1985-01-02 .. 2026-09-09  sha256 313cc1b0a331à
+  anp_producer      713 linhas  2012-12-30 .. 2026-08-23  sha256 f24394738aa4à
+
+cobertura por coluna:
+  ulsd             705/705
+  brent            705/705
+  usdbrl           705/705
+  producer_price   704/705
+  parity           705/705
+
+gravado: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\processed\s10_causal_panel.csv
+manifesto: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\processed\s10_causal_panel_manifest.json
+2026-09-09 19:17:29  ok ingestao causal e painel (16.7s)
+2026-09-09 19:17:29  ==> previsao nacional (paridade) (23_s10_parity_production.py)
+treino: 652 semanas ate 2026-08-30
+coeficientes:
+  intercept    +0.000409
+  dp1          +0.310078
+  rpar1        +0.038529
+  rpar2        +0.017120
+  coint_par    -0.000121
+
+origem  2026-08-30  R$ 6.8800/L
+alvo    2026-09-06
+ponto   R$ 6.8800/L  (variacao +0.0000)
+P10-P90 R$ 6.8449 a 6.9180/L (adaptive_conformal_normalized)
+  quantil fixo   cobertura 0.910 largura 0.0861 winkler 0.1546
+  conformal      cobertura 0.795 largura 0.0668 winkler 0.1504
+  banda +22.4% mais estreita em 156 semanas de calibracao
+fallback: False  
+
+decisao: NAO ANTECIPAR (200,000 L/mes)
+
+artefato C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\artifacts\s10_parity.joblib
+sha256   5ee50a8406279afae7d10ae978676807a4b2d9a39c286be2d5df27bd08d10a04
+
+ledger: previsao identica ja registrada para esta semana-alvo
+ledger   C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_parity\parity_ledger.jsonl
+registros 3, head fe4394b1a8f5be5d
+contagem prospectiva: 1/26 semanas liquidadas
+2026-09-09 19:17:35  ok previsao nacional (paridade) (6.2s)
+2026-09-09 19:17:35  ==> serie estadual RS (26_s10_rs_regional.py)
+painel RS: 704 semanas, 2012-12-30 a 2026-08-30
+postos pesquisados: mediana 261
+janela congelada: desenvolvimento ate 2024-08-11; o holdout nao e lido
+
+                modelo      mae  mae_quiet  mae_event  directional_accuracy  net_savings_brl  triggered  precision
+          persistencia 0.059731   0.008536   0.100333              0.000000         0.000000          0        NaN
+             rs_direto 0.059437   0.017566   0.092645              0.652174     38088.461538         56   0.517857
+      nacional+carrego 0.057541   0.019326   0.087849              0.659420     43015.384615         53   0.584906
+       nacional+spread 0.057294   0.019832   0.087005              0.695652     46292.307692         60   0.600000
+nacional+spread+ancora 0.057403   0.021652   0.085757              0.688406     46892.307692         59   0.593220
+
+melhor MAE: nacional+spread
+
+MAE contra o modelo aplicado direto ao estado (bootstrap pareado em blocos):
+  persistencia             +0.000294 IC90 [-0.002186, +0.002814] -> sem ganho decidivel
+  nacional+carrego         -0.001896 IC90 [-0.005701, +0.001806] -> sem ganho decidivel
+  nacional+spread          -0.002144 IC90 [-0.005912, +0.001510] -> sem ganho decidivel
+  nacional+spread+ancora   -0.002035 IC90 [-0.006062, +0.001831] -> sem ganho decidivel
+
+spread ajustado ate o fim do desenvolvimento: {"fitted": true, "n_train": 490, "reversion_kappa": 0.067725, "reversion_kappa_local": 0.067725, "reversion_kappa_se": 0.016414, "pooled_kappa": null, "pooling_weight": 1.0, "half_life_weeks": 9.88, "target_mean": -0.067037, "anchor_weight": -0.010183, "residual_sigma": 0.027244, "uses_producer_anchor": true, "weighted_by_stations": false}
+spread corrente -0.3300 (z = -3.12); preco RS R$ 6.5500/L contra nacional R$ 6.8800/L
+  percentil 0.4% de 704 semanas; 5 semanas nesse nivel em 2 episodio(s) independente(s)
+    q2% (<= -0.2747):  15 semanas em 3 episodios; 12s depois +0.1420, positiva em 100%
+    q5% (<= -0.2126):  36 semanas em 4 episodios; 12s depois +0.1009, positiva em 92%
+    q10% (<= -0.1517):  71 semanas em 6 episodios; 12s depois +0.0545, positiva em 75%
+
+erro de base nas ultimas 52 semanas: R$ 0.1490/L -> R$ 357,692/ano para 200,000 L/mes
+
+gravado em C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_rs
+2026-09-09 19:20:05  ok serie estadual RS (150.1s)
+2026-09-09 19:20:05  ==> previsao estadual (RS) (27_s10_rs_production.py)
+RS: treino com 703 semanas ate 2026-08-30
+modelo de spread: {"fitted": true, "n_train": 703, "reversion_kappa": 0.031751, "reversion_kappa_local": 0.031751, "reversion_kappa_se": 0.010394, "pooled_kappa": null, "pooling_weight": 1.0, "half_life_weeks": 21.48, "target_mean": -0.046936, "anchor_weight": 0.0, "residual_sigma": 0.02623, "uses_producer_anchor": false, "weighted_by_stations": false}
+
+origem  2026-08-30  R$ 6.5500/L
+alvo    2026-09-06
+nacional R$ 6.8800/L  +  spread R$ -0.3210/L
+ponto   R$ 6.5590/L  (variacao +0.0090)
+P10-P90 R$ 6.5053 a 6.6095/L (adaptive_conformal)
+  cobertura calibrada 76.9% em 156 semanas
+
+decisao: AGUARDAR (200,000 L/mes)
+
+base: RS R$ 6.5500/L contra nacional R$ 6.8800/L (-4.80%)
+  erro de orcamento por usar a serie nacional: R$ 0.1490/L -> R$ 357,692/ano
+  spread no percentil 0.4% de 704 semanas (z = -3.12)
+
+ledger: previsao identica ja registrada para esta semana-alvo
+artefato C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\artifacts\s10_rs.joblib
+sha256   1ab702382848025e7f3b0d744d6cede722ad8a8f3138858403ff4b159c9cd215
+ledger   C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_rs\rs_ledger.jsonl
+registros 3, head 73f6b441dafab043
+contagem prospectiva: 1/26 semanas liquidadas
+2026-09-09 19:20:16  ok previsao estadual (RS) (11s)
+2026-09-09 19:20:16  ==> revisao dos ledgers (29_s10_ledger_review.py)
+OK paridade
+     1/26 semanas liquidadas, 2 previsao(oes) registrada(s)
+     pendente: 2026-09-06 (0 semana(s))
+     cobertura 100.0%
+     MAE 0.0321 contra 0.0100 da persistencia
+OK regional_rs
+     1/26 semanas liquidadas, 2 previsao(oes) registrada(s)
+     pendente: 2026-09-06 (0 semana(s))
+     cobertura 100.0%
+     MAE 0.0410 contra 0.0100 da persistencia
+2026-09-09 19:20:25  ok revisao dos ledgers (9.6s)
+2026-09-09 19:20:25  atualizacao semanal concluida com sucesso
+2026-09-09 19:27:29  inicio da atualizacao semanal
+2026-09-09 19:27:29  ==> download das fontes ANP/IPEA/BCB (01_download.py)
+Arquivos baixados:
+  mensal_2013: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\anp_mensal_desde_2013.xlsx
+  mensal_2001: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\anp_mensal_2001_2012.xlsx
+  semanal_2013: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\anp_semanal_desde_2013.xlsx
+  ulsd: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\stooq_ulsd.csv
+  brent: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\ipeadata_brent.json
+  fx: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\raw\ipeadata_usdbrl.json
+
+Gate Tabela 1 (S10 mensal dez/2012-mai/2020):
+  ok = True
+  n        obs=90  art=90  diff=0
+  mean     obs=3.1139  art=3.114  diff=-0.0001
+  std      obs=0.4532  art=0.453  diff=0.0002
+  min      obs=2.2260  art=2.226  diff=0.0000
+  q1       obs=2.6583  art=2.658  diff=0.0003
+  median   obs=3.1515  art=3.152  diff=-0.0005
+  q3       obs=3.5050  art=3.505  diff=0.0000
+  max      obs=3.8560  art=3.856  diff=0.0000
+
+Mensal completo: 164 linhas
+Semanal completo: 705 linhas
+Janela artigo: 90 linhas
+2026-09-09 19:27:39  ok download das fontes ANP/IPEA/BCB (9.9s)
+2026-09-09 19:27:39  ==> ingestao causal e painel (21_s10_ingest_causal.py)
+revenda: 705 semanas, 2012-12-30 a 2026-08-30
+baixando fontes causais...
+
+painel: 705 semanas, 2012-12-30 a 2026-08-30
+
+fontes:
+  ulsd             3944 linhas  2011-01-03 .. 2026-09-09  sha256 2ab340905e72�
+  brent           11751 linhas  1987-05-20 .. 2026-09-01  sha256 b454952d7e44�
+  usdbrl          10446 linhas  1985-01-02 .. 2026-09-09  sha256 313cc1b0a331�
+  anp_producer      713 linhas  2012-12-30 .. 2026-08-23  sha256 f24394738aa4�
+
+cobertura por coluna:
+  ulsd             705/705
+  brent            705/705
+  usdbrl           705/705
+  producer_price   704/705
+  parity           705/705
+
+gravado: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\processed\s10_causal_panel.csv
+manifesto: C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\data\processed\s10_causal_panel_manifest.json
+2026-09-09 19:27:52  ok ingestao causal e painel (13.2s)
+2026-09-09 19:27:52  ==> previsao nacional (paridade) (23_s10_parity_production.py)
+treino: 652 semanas ate 2026-08-30
+coeficientes:
+  intercept    +0.000409
+  dp1          +0.310078
+  rpar1        +0.038529
+  rpar2        +0.017120
+  coint_par    -0.000121
+
+origem  2026-08-30  R$ 6.8800/L
+alvo    2026-09-06
+ponto   R$ 6.8800/L  (variacao +0.0000)
+P10-P90 R$ 6.8449 a 6.9180/L (adaptive_conformal_normalized)
+  quantil fixo   cobertura 0.910 largura 0.0861 winkler 0.1546
+  conformal      cobertura 0.795 largura 0.0668 winkler 0.1504
+  banda +22.4% mais estreita em 156 semanas de calibracao
+fallback: False  
+
+decisao: NAO ANTECIPAR (200,000 L/mes)
+
+artefato C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\artifacts\s10_parity.joblib
+sha256   5ee50a8406279afae7d10ae978676807a4b2d9a39c286be2d5df27bd08d10a04
+
+ledger: previsao identica ja registrada para esta semana-alvo
+ledger   C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_parity\parity_ledger.jsonl
+registros 3, head fe4394b1a8f5be5d
+contagem prospectiva: 1/26 semanas liquidadas
+2026-09-09 19:27:58  ok previsao nacional (paridade) (6.2s)
+2026-09-09 19:27:58  ==> serie estadual RS (26_s10_rs_regional.py)
+painel RS: 704 semanas, 2012-12-30 a 2026-08-30
+postos pesquisados: mediana 261
+janela congelada: desenvolvimento ate 2024-08-11; o holdout nao e lido
+
+                modelo      mae  mae_quiet  mae_event  directional_accuracy  net_savings_brl  triggered  precision
+          persistencia 0.059731   0.008536   0.100333              0.000000         0.000000          0        NaN
+             rs_direto 0.059437   0.017566   0.092645              0.652174     38088.461538         56   0.517857
+      nacional+carrego 0.057541   0.019326   0.087849              0.659420     43015.384615         53   0.584906
+       nacional+spread 0.057294   0.019832   0.087005              0.695652     46292.307692         60   0.600000
+nacional+spread+ancora 0.057403   0.021652   0.085757              0.688406     46892.307692         59   0.593220
+
+melhor MAE: nacional+spread
+
+MAE contra o modelo aplicado direto ao estado (bootstrap pareado em blocos):
+  persistencia             +0.000294 IC90 [-0.002186, +0.002814] -> sem ganho decidivel
+  nacional+carrego         -0.001896 IC90 [-0.005701, +0.001806] -> sem ganho decidivel
+  nacional+spread          -0.002144 IC90 [-0.005912, +0.001510] -> sem ganho decidivel
+  nacional+spread+ancora   -0.002035 IC90 [-0.006062, +0.001831] -> sem ganho decidivel
+
+spread ajustado ate o fim do desenvolvimento: {"fitted": true, "n_train": 490, "reversion_kappa": 0.067725, "reversion_kappa_local": 0.067725, "reversion_kappa_se": 0.016414, "pooled_kappa": null, "pooling_weight": 1.0, "half_life_weeks": 9.88, "target_mean": -0.067037, "anchor_weight": -0.010183, "residual_sigma": 0.027244, "uses_producer_anchor": true, "weighted_by_stations": false}
+spread corrente -0.3300 (z = -3.12); preco RS R$ 6.5500/L contra nacional R$ 6.8800/L
+  percentil 0.4% de 704 semanas; 5 semanas nesse nivel em 2 episodio(s) independente(s)
+    q2% (<= -0.2747):  15 semanas em 3 episodios; 12s depois +0.1420, positiva em 100%
+    q5% (<= -0.2126):  36 semanas em 4 episodios; 12s depois +0.1009, positiva em 92%
+    q10% (<= -0.1517):  71 semanas em 6 episodios; 12s depois +0.0545, positiva em 75%
+
+erro de base nas ultimas 52 semanas: R$ 0.1490/L -> R$ 357,692/ano para 200,000 L/mes
+
+gravado em C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_rs
+2026-09-09 19:29:16  ok serie estadual RS (78.0s)
+2026-09-09 19:29:16  ==> previsao estadual (RS) (27_s10_rs_production.py)
+RS: treino com 703 semanas ate 2026-08-30
+modelo de spread: {"fitted": true, "n_train": 703, "reversion_kappa": 0.031751, "reversion_kappa_local": 0.031751, "reversion_kappa_se": 0.010394, "pooled_kappa": null, "pooling_weight": 1.0, "half_life_weeks": 21.48, "target_mean": -0.046936, "anchor_weight": 0.0, "residual_sigma": 0.02623, "uses_producer_anchor": false, "weighted_by_stations": false}
+
+origem  2026-08-30  R$ 6.5500/L
+alvo    2026-09-06
+nacional R$ 6.8800/L  +  spread R$ -0.3210/L
+ponto   R$ 6.5590/L  (variacao +0.0090)
+P10-P90 R$ 6.5053 a 6.6095/L (adaptive_conformal)
+  cobertura calibrada 76.9% em 156 semanas
+
+decisao: AGUARDAR (200,000 L/mes)
+
+base: RS R$ 6.5500/L contra nacional R$ 6.8800/L (-4.80%)
+  erro de orcamento por usar a serie nacional: R$ 0.1490/L -> R$ 357,692/ano
+  spread no percentil 0.4% de 704 semanas (z = -3.12)
+
+ledger: previsao identica ja registrada para esta semana-alvo
+artefato C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\artifacts\s10_rs.joblib
+sha256   1ab702382848025e7f3b0d744d6cede722ad8a8f3138858403ff4b159c9cd215
+ledger   C:\Users\Wesley.Barbaro\Documents\tcc-joao\tcc-mvp\reports\vs_epl_krls\s10_rs\rs_ledger.jsonl
+registros 3, head 73f6b441dafab043
+contagem prospectiva: 1/26 semanas liquidadas
+2026-09-09 19:29:22  ok previsao estadual (RS) (6.1s)
+2026-09-09 19:29:22  ==> revisao dos ledgers (29_s10_ledger_review.py)
+OK paridade
+     1/26 semanas liquidadas, 2 previsao(oes) registrada(s)
+     pendente: 2026-09-06 (0 semana(s))
+     cobertura 100.0%
+     MAE 0.0321 contra 0.0100 da persistencia
+OK regional_rs
+     1/26 semanas liquidadas, 2 previsao(oes) registrada(s)
+     pendente: 2026-09-06 (0 semana(s))
+     cobertura 100.0%
+     MAE 0.0410 contra 0.0100 da persistencia
+2026-09-09 19:29:27  ok revisao dos ledgers (4.5s)
+2026-09-09 19:29:27  atualizacao semanal concluida com sucesso

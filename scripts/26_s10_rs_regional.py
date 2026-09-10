@@ -142,11 +142,15 @@ def state_direct_predictions(panel: pd.DataFrame, start: int, end: int) -> np.nd
         causal.drop(columns=["price"]), on="date", how="left"
     )
     state_panel = build_parity_panel(merged)
+    wanted = panel["date"].iloc[start:end]
+    positions = state_panel.index[state_panel["date"].isin(wanted)]
+    if len(positions) != len(wanted):
+        raise ValueError("state parity panel is missing requested target dates")
     model = PassThroughECM(config=PassThroughConfig(), feature_names=PARITY_FEATURES)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        result = model.walk_forward(state_panel, start, end, refit_every=1)
-    return result["prediction"].to_numpy(float)
+        result = model.walk_forward(state_panel, max(1, int(positions.min())), int(positions.max()) + 1, refit_every=1)
+    return result.set_index("date")["prediction"].reindex(wanted).to_numpy(float)
 
 
 def contiguous_blocks(frame: pd.DataFrame) -> list[pd.DataFrame]:
