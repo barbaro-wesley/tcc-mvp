@@ -37,7 +37,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["vs_epl_krls*"]
+include = ["vs_epl_krls*", "s10_tenancy*"]
 
 [tool.ruff]
 target-version = "py310"

@@ -16,7 +16,6 @@ from numpy.typing import ArrayLike, NDArray
 from .metrics import regression_report
 from .model import VSEPLKRLS
 from .selection import S10Candidate, S10Supervised, TemporalFold
-from .utils import MinMaxScaler
 
 
 @dataclass
@@ -84,11 +83,11 @@ def evaluate_residual_hybrid(
     if not np.all(np.isfinite(base[start:end])):
         raise ValueError("base_predictions must be finite throughout the evaluation fold")
 
-    x_scaler = MinMaxScaler().fit(data.x[:start])
+    x_scaler = candidate.make_feature_scaler().fit(data.x[:start])
     x_scaled = np.clip(x_scaler.transform(data.x), 0.0, 1.0)
     residual_target = data.target_price - base
     model = VSEPLKRLS(**candidate.model_parameters())
-    known_end = start - data.horizon
+    known_end = data.known_target_end(start)
     learned_until = -1
     started = time.perf_counter()
     for index in range(known_end):
@@ -102,8 +101,8 @@ def evaluate_residual_hybrid(
     betas: list[float] = []
     dictionary_sizes: list[int] = []
     for index in range(start, end):
-        newly_available = index - data.horizon
-        if newly_available > learned_until:
+        while learned_until + 1 < data.known_target_end(index):
+            newly_available = learned_until + 1
             if np.isfinite(residual_target[newly_available]):
                 model.learn_one(
                     x_scaled[newly_available],

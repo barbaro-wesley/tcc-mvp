@@ -18,7 +18,8 @@ from numpy.typing import NDArray
 
 from .metrics import regression_report
 from .model import VSEPLKRLS
-from .utils import MinMaxScaler
+from .utils import MinMaxScaler, RobustBoundedScaler
+from .weekly import weekly_grid
 
 
 FeatureSet = Literal["price", "lags", "dynamics", "exogenous"]
@@ -59,8 +60,11 @@ class S10Candidate:
     threshold_policy: Literal["dynamic", "fixed"] = "fixed"
     enable_rule_merging: bool = True
     adapt_kernel_width: bool = False
+    feature_scaling: Literal["minmax", "robust_bounded"] = "minmax"
 
     def __post_init__(self) -> None:
+        if self.feature_scaling not in {"minmax", "robust_bounded"}:
+            raise ValueError("unsupported feature_scaling")
         if (
             not np.isfinite(self.residual_correction_weight)
             or not 0 < self.residual_correction_weight <= 1
@@ -71,6 +75,9 @@ class S10Candidate:
             or self.residual_correction_limit <= 0
         ):
             raise ValueError("residual_correction_limit must be finite and positive")
+
+    def make_feature_scaler(self) -> MinMaxScaler | RobustBoundedScaler:
+        return RobustBoundedScaler() if self.feature_scaling == "robust_bounded" else MinMaxScaler()
 
     def model_parameters(self) -> dict[str, object]:
         normalization = "none" if self.target_mode == "level" else "running_std"
@@ -123,6 +130,11 @@ class S10Supervised:
     target_dates: NDArray[np.datetime64]
     feature_names: tuple[str, ...]
     horizon: int
+    price_history: pd.DataFrame | None = None
+
+    def known_target_end(self, origin: int) -> int:
+        """Exclusive end of labels observed by this origin, even across gaps."""
+        return int(np.searchsorted(self.target_dates, self.dates[origin], side="right"))
 
     @property
     def n_samples(self) -> int:
@@ -150,6 +162,7 @@ class FoldResult:
     rule_counts: NDArray[np.int64]
     betas: NDArray[np.float64]
     dictionary_sizes: NDArray[np.int64]
+    feature_clip_fraction: float = 0.0
 
     def summary_row(self) -> dict[str, object]:
         return {
@@ -158,6 +171,8 @@ class FoldResult:
             **self.metrics,
             "naive_rmse": self.naive_metrics["rmse"],
             "rmse_ratio": self.rmse_ratio,
+            "mae_ratio": self.metrics["mae"] / max(self.naive_metrics["mae"], 1e-12),
+            "feature_clip_fraction": self.feature_clip_fraction,
             "elapsed_seconds": self.elapsed_seconds,
             "prediction_latency_ms_p95": self.prediction_latency_ms_p95,
             "n_rules": self.n_rules,
@@ -206,8 +221,10 @@ def build_s10_supervised(
     )
     table = feature_frame.copy()
     table["origin_price"] = table["price"]
-    table["target_price"] = table["price"].shift(-horizon)
-    table["target_date"] = table["date"].shift(-horizon)
+    table["target_date"] = table["date"] + pd.Timedelta(weeks=horizon)
+    history = _validated_price_frame(frame)
+    targets = history.set_index("date")["price"]
+    table["target_price"] = table["target_date"].map(targets)
     table = table.dropna().reset_index(drop=True)
     return S10Supervised(
         x=table[list(feature_names)].to_numpy(float),
@@ -217,6 +234,7 @@ def build_s10_supervised(
         target_dates=table["target_date"].to_numpy(dtype="datetime64[ns]"),
         feature_names=feature_names,
         horizon=int(horizon),
+        price_history=weekly_grid(history[["date", "price"]]),
     )
 
 
@@ -227,7 +245,7 @@ def build_s10_feature_frame(
 ) -> pd.DataFrame:
     """Return causal features through the latest, not-yet-labelled origin."""
 
-    data = _validated_price_frame(frame)
+    data = weekly_grid(_validated_price_frame(frame))
     price = data["price"].astype(float)
     features = pd.DataFrame(index=data.index)
     if feature_set == "price":
@@ -262,7 +280,9 @@ def build_s10_feature_frame(
     for column in features:
         table[column] = features[column]
     # Align every feature set to the same first eligible origin.
-    table["_common_warmup"] = price.shift(12)
+    # Every feature set requires a contiguous 13-week context. Missing weeks
+    # remain missing and cannot turn a lag of one week into a lag of nine weeks.
+    table["_common_warmup"] = price.rolling(13, min_periods=13).mean()
     return table.dropna().drop(columns=["_common_warmup"]).reset_index(drop=True)
 
 
@@ -424,9 +444,12 @@ def evaluate_temporal_fold(
     start, end = fold.validation_start, fold.validation_end
     if not data.horizon <= start < end <= data.n_samples:
         raise ValueError("invalid temporal fold bounds")
-    known_end = start - data.horizon
-    x_scaler = MinMaxScaler().fit(data.x[:start])
-    x_scaled = np.clip(x_scaler.transform(data.x), 0.0, 1.0)
+    known_end = data.known_target_end(start)
+    if known_end < 1:
+        raise ValueError("no known targets before validation")
+    x_scaler = candidate.make_feature_scaler().fit(data.x[:start])
+    transformed = x_scaler.transform(data.x)
+    x_scaled = np.clip(transformed, 0.0, 1.0)
     raw_target = _target_values(data, candidate.target_mode)
     target_scaler: MinMaxScaler | None = None
     if candidate.target_mode == "level":
@@ -448,10 +471,9 @@ def evaluate_temporal_fold(
     betas: list[float] = []
     dictionary_sizes: list[int] = []
     for index in range(start, end):
-        newly_available = index - data.horizon
-        if newly_available > learned_until:
-            model.learn_one(x_scaled[newly_available], float(model_target[newly_available]))
-            learned_until = newly_available
+        while learned_until + 1 < data.known_target_end(index):
+            learned_until += 1
+            model.learn_one(x_scaled[learned_until], float(model_target[learned_until]))
         prediction_started = time.perf_counter_ns()
         model_predictions.append(model.predict_one(x_scaled[index]))
         latencies.append((time.perf_counter_ns() - prediction_started) / 1e6)
@@ -491,6 +513,7 @@ def evaluate_temporal_fold(
         rule_counts=np.asarray(rule_counts, dtype=np.int64),
         betas=np.asarray(betas, dtype=float),
         dictionary_sizes=np.asarray(dictionary_sizes, dtype=np.int64),
+        feature_clip_fraction=float(np.mean(np.abs(transformed[start:end] - x_scaled[start:end]) > 1e-12)),
     )
 
 
@@ -499,6 +522,7 @@ def candidate_grid(
     horizon: int,
     random_state: int = 42,
     n_random: int = 36,
+    feature_scaling: Literal["minmax", "robust_bounded"] = "robust_bounded",
 ) -> list[S10Candidate]:
     """Return source-informed seeds plus a deterministic compact random search."""
 
@@ -514,7 +538,8 @@ def candidate_grid(
     for feature_set in ("price", "lags", "dynamics"):
         candidates.append(
             S10Candidate(
-                candidate_id=f"source_{feature_set}_level",
+                candidate_id=f"source_{feature_set}_level_{feature_scaling}",
+                feature_scaling=feature_scaling,
                 feature_set=feature_set,  # type: ignore[arg-type]
                 target_mode="level",
                 alpha=source[0],
@@ -541,7 +566,8 @@ def candidate_grid(
         alpha_vs1, alpha_vs2 = ((0.94, 0.74), (0.89, 0.62), (0.97, 0.84))[int(rng.integers(0, 3))]
         candidates.append(
             S10Candidate(
-                candidate_id=f"random_{index:03d}_{feature_set}_{target_mode}",
+                candidate_id=f"random_{index:03d}_{feature_set}_{target_mode}_{feature_scaling}",
+                feature_scaling=feature_scaling,
                 feature_set=feature_set,  # type: ignore[arg-type]
                 target_mode=target_mode,  # type: ignore[arg-type]
                 alpha=float(rng.choice([0.01, 0.03, 0.08, 0.15, 0.26])),
@@ -570,6 +596,7 @@ def rank_candidates(
 ) -> tuple[pd.DataFrame, list[FoldResult]]:
     """Evaluate candidates and rank by accuracy plus cross-fold instability."""
 
+    folds = tuple(folds)
     all_results: list[FoldResult] = []
     candidate_lookup: dict[str, S10Candidate] = {}
     for candidate in candidates:
@@ -584,6 +611,10 @@ def rank_candidates(
         worst_rmse_ratio=("rmse_ratio", "max"),
         rmse_ratio_std=("rmse_ratio", "std"),
         mean_mae=("mae", "mean"),
+        mean_mae_ratio=("mae_ratio", "mean"),
+        worst_mae_ratio=("mae_ratio", "max"),
+        mae_ratio_std=("mae_ratio", "std"),
+        max_feature_clip_fraction=("feature_clip_fraction", "max"),
         mean_smape=("smape", "mean"),
         latency_ms_p95=("prediction_latency_ms_p95", "max"),
         max_rules=("max_rules", "max"),
@@ -592,16 +623,17 @@ def rank_candidates(
         dictionary_replacement_rate=("dictionary_replacement_rate", "max"),
     )
     grouped["selection_score"] = (
-        grouped["mean_rmse_ratio"]
-        + 0.20 * grouped["worst_rmse_ratio"]
-        + 0.10 * grouped["rmse_ratio_std"].fillna(0.0)
+        grouped["mean_mae_ratio"]
+        + 0.20 * grouped["worst_mae_ratio"]
+        + 0.10 * grouped["mae_ratio_std"].fillna(0.0)
     )
-    grouped["beats_naive_all_folds"] = grouped["worst_rmse_ratio"] < 1.0
+    grouped["beats_naive_all_folds"] = grouped["worst_mae_ratio"] < 1.0
+    grouped["selection_metric"] = "mae_ratio"
     grouped["candidate"] = grouped["candidate_id"].map(
         lambda identifier: asdict(candidate_lookup[str(identifier)])
     )
     grouped = grouped.sort_values(
-        ["selection_score", "mean_rmse", "latency_ms_p95"],
+        ["selection_score", "mean_mae", "latency_ms_p95"],
         ignore_index=True,
     )
     return grouped, all_results

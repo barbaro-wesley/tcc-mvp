@@ -70,15 +70,21 @@ def _causal_arima_predictions(
     predictions = np.full(data.n_samples, np.nan, dtype=float)
     model = None
     last_fit = -10**9
+    last_history_size = 0
     for origin in range(min_history, end):
-        history = data.origin_price[: origin + 1]
+        calendar = getattr(data, "price_history", None)
+        history = (
+            calendar.loc[calendar["date"] <= pd.Timestamp(data.dates[origin]), "price"].to_numpy(float)
+            if calendar is not None else data.origin_price[: origin + 1]
+        )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            if model is None or origin - last_fit >= refit_every:
+            if model is None or origin - last_fit >= refit_every or len(history) - last_history_size != 1:
                 forecast, model = arima_forecast(history, steps=1, model=None)
                 last_fit = origin
             else:
                 forecast, model = arima_forecast(history, steps=1, model=model)
+        last_history_size = len(history)
         predictions[origin] = float(forecast[0])
     return predictions
 

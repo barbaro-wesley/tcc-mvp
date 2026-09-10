@@ -1,4 +1,10 @@
 {
+  "release_contract_version": "1.0",
+  "release_status": "validated_candidate",
+  "created_at_utc": "2026-09-09T23:16:34.463215+00:00",
+  "artifact": "C:\\Users\\Wesley.Barbaro\\Documents\\tcc-joao\\tcc-mvp\\artifacts\\releases\\s10_production_2026-08-30.joblib",
+  "artifact_sha256": "bb7d0aa61f3df2f633bd00983538600b66b9f32edac019659264698ebc036550",
+  "parent_artifact_sha256": "8c6188383eb6b19b51bba7a54710658a26d185c2553d71f289b878c7ba10cb2d",
   "forecast": {
     "target_date": "2026-09-06",
     "point": 6.88,
@@ -108,22 +114,12 @@
       "joblib": "1.6.0"
     }
   },
-  "artifact": "C:\\Users\\Wesley.Barbaro\\Documents\\tcc-joao\\tcc-mvp\\artifacts\\s10_production.joblib",
-  "artifact_sha256": "bb7d0aa61f3df2f633bd00983538600b66b9f32edac019659264698ebc036550",
-  "runtime_benchmark": {
-    "load_ms": 69.5256,
-    "predict_p50_ms": 8.7511,
-    "predict_p95_ms": 13.4251,
-    "predict_p99_ms": 14.361916000000013,
-    "n_predictions": 100,
-    "deterministic_points": true,
-    "artifact_bytes": 1571252
+  "quality_gates": {
+    "artifact_integrity_verified": true,
+    "serialization_roundtrip_exact": true,
+    "forecast_finite": true,
+    "interval_ordered": true,
+    "fallback_used": false
   },
-  "selection_manifest": "C:\\Users\\Wesley.Barbaro\\Documents\\tcc-joao\\tcc-mvp\\reports\\vs_epl_krls\\s10_selection\\selection_manifest_h1.json",
-  "production_gate": {
-    "selection_used_holdout_for_tuning": false,
-    "roundtrip_exact": true,
-    "primary_approved": "ARIMA",
-    "vs_epl_krls_promoted": false
-  }
+  "promotion_note": "Origem dos dados avancada para a semana de 2026-08-30; o modelo primario permanece o aprovado pela selecao. O holdout nao foi reaberto (S10_HOLDOUT_END continua congelado) e nenhum challenger foi promovido."
 }

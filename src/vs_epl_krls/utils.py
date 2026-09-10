@@ -66,6 +66,36 @@ class RunningTargetStats:
         return 0.0 if self.count < 2 else float(np.sqrt(self.m2 / (self.count - 1)))
 
 
+class RobustBoundedScaler:
+    """Past-fitted median/IQR scaling into (0,1), without hard clipping.
+
+    The arctangent retains ordering beyond the historical range. The scaler
+    remains frozen with the fuzzy centers and KRLS dictionaries it encodes.
+    """
+
+    def fit(self, x: ArrayLike) -> "RobustBoundedScaler":
+        values = np.asarray(x, dtype=float)
+        if values.ndim != 2 or not values.size or not np.isfinite(values).all():
+            raise ValueError("x must be a non-empty finite 2-D array")
+        self.center_ = np.median(values, axis=0)
+        q25, q75 = np.quantile(values, [0.25, 0.75], axis=0)
+        spread = q75 - q25
+        fallback = np.std(values, axis=0)
+        self.scale_ = np.where(spread > 1e-12, spread, np.where(fallback > 1e-12, fallback, 1.0))
+        return self
+
+    def transform(self, x: ArrayLike) -> NDArray[np.float64]:
+        if not hasattr(self, "center_"):
+            raise RuntimeError("the scaler has not been fitted")
+        values = np.asarray(x, dtype=float)
+        if values.ndim != 2 or values.shape[1] != self.center_.size:
+            raise ValueError("x has an incompatible shape")
+        if not np.isfinite(values).all():
+            raise ValueError("x must be finite")
+        with np.errstate(over="ignore"):
+            return 0.5 + np.arctan((values - self.center_) / self.scale_) / np.pi
+
+
 class MinMaxScaler:
     """Small NumPy-only min-max scaler fitted on an explicit training split."""
 

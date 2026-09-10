@@ -20,7 +20,6 @@ from pathlib import Path
 import sys
 
 import joblib
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +37,7 @@ from vs_epl_krls.passthrough import (  # noqa: E402
     PassThroughConfig,
     PassThroughECM,
     build_parity_panel,
+    build_next_parity_row,
 )
 
 CONTRACT_VERSION = "parity-1.0.0"
@@ -174,28 +174,13 @@ def main() -> int:
     model = PassThroughECM(config=config, feature_names=PARITY_FEATURES).fit(panel)
     summary = model.summary()
 
-    # A ultima linha do painel ja tem todos os atributos prontos: eles descrevem
-    # a semana seguinte a ultima revenda observada.
+    # A linha futura usa a mesma construcao causal dos atributos do treino.
     last = panel.iloc[-1]
     origin_price = float(last["price"])
     origin_date = pd.Timestamp(last["date"])
     target_date = origin_date + pd.Timedelta(days=7)
 
-    delta_parity = np.log(causal["parity"]).diff()
-    next_row = pd.Series(
-        {
-            "dp1": float(last["y"]),
-            "rpar1": float(delta_parity.iloc[-1] * origin_price),
-            "rpar2": float(delta_parity.iloc[-2] * origin_price),
-            "coint_par": float(last["coint_par"] / last["origin_price"] * origin_price)
-            if np.isfinite(last["coint_par"]) and last["origin_price"]
-            else np.nan,
-            "volatility": float(last["volatility"]),
-            "abs_cost_move": abs(float(delta_parity.iloc[-1] * origin_price)),
-            "date": target_date,
-            "origin_date": origin_date,
-        }
-    )
+    next_row = build_next_parity_row(causal, config=config)
     forecast = model.forecast_row(next_row, origin_price=origin_price)
 
     band, calibration = calibrated_band(model, panel)
@@ -285,7 +270,7 @@ def main() -> int:
         print()
         print(f"semana liquidada {scored['target_date']}: "
               f"observado R$ {scored['observed_price']:.4f}/L, "
-              f"erro paridade R$ {scored['parity_absolute_error']:.4f}/L, "
+              f"erro paridade R$ {scored['absolute_error']:.4f}/L, "
               f"erro persistencia R$ {scored['persistence_absolute_error']:.4f}/L, "
               f"intervalo {'cobriu' if scored['interval_covered'] else 'NAO cobriu'}")
     if forecast_record is None:

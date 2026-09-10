@@ -1,0 +1,551 @@
+{
+  "scope": "diagnostics only; no promotion, no new holdout predictions",
+  "runtime": {
+    "numpy": "2.5.3",
+    "pandas": "3.0.5"
+  },
+  "panel_rows": 705,
+  "legacy_missing_fraction": {
+    "ulsd": 1.0,
+    "ulsd_l1": 1.0,
+    "distribuicao_l1": 0.43546099290780144
+  },
+  "causal_missing_fraction": {
+    "ulsd": 0.0,
+    "parity": 0.0,
+    "producer_price": 0.0014184397163120568
+  },
+  "nonweekly_h1_pairs": [
+    {
+      "origin": "2015-08-09",
+      "target": "2015-08-23",
+      "days": 14.0
+    },
+    {
+      "origin": "2020-08-16",
+      "target": "2020-10-18",
+      "days": 63.0
+    }
+  ],
+  "lags_scaler_development_clipping": [
+    {
+      "fold": "validation_1",
+      "cell_fraction": 0.9903846153846154,
+      "rows_with_clipping_fraction": 1.0,
+      "rows": 52,
+      "unique_raw_rows": 52,
+      "unique_clipped_rows": 2,
+      "start_target": "2021-08-22",
+      "end_target": "2022-08-14"
+    },
+    {
+      "fold": "validation_2",
+      "cell_fraction": 0.057692307692307696,
+      "rows_with_clipping_fraction": 0.25,
+      "rows": 52,
+      "unique_raw_rows": 52,
+      "unique_clipped_rows": 52,
+      "start_target": "2022-08-21",
+      "end_target": "2023-08-13"
+    },
+    {
+      "fold": "validation_3",
+      "cell_fraction": 0.0,
+      "rows_with_clipping_fraction": 0.0,
+      "rows": 52,
+      "unique_raw_rows": 52,
+      "unique_clipped_rows": 52,
+      "start_target": "2023-08-20",
+      "end_target": "2024-08-11"
+    }
+  ],
+  "recomputed_published_holdout_predictions": {
+    "arima": {
+      "mae": 0.027068855125188494,
+      "rmse": 0.08146326525915304,
+      "within_1cent_fraction": 0.5576923076923077,
+      "within_2cents_fraction": 0.7307692307692307,
+      "quiet_mae_threshold_002": 0.00794605930982421,
+      "direction_moving_only": 0.5915492957746479,
+      "moving_weeks": 71,
+      "all_weeks": 104,
+      "top1_squared_error_share": 0.7509407450384012,
+      "top3_squared_error_share": 0.9116597742937216
+    },
+    "paridade": {
+      "mae": 0.0275209036478789,
+      "rmse": 0.08080676622216097,
+      "within_1cent_fraction": 0.41346153846153844,
+      "within_2cents_fraction": 0.6826923076923077,
+      "quiet_mae_threshold_002": 0.011438679182304156,
+      "direction_moving_only": 0.7183098591549296,
+      "moving_weeks": 71,
+      "all_weeks": 104,
+      "top1_squared_error_share": 0.7602000501635261,
+      "top3_squared_error_share": 0.9150007471095913
+    },
+    "persistence": {
+      "mae": 0.03259615384615387,
+      "rmse": 0.09563049883636654,
+      "within_1cent_fraction": 0.6153846153846154,
+      "within_2cents_fraction": 0.7115384615384616,
+      "quiet_mae_threshold_002": 0.005942028985507248,
+      "direction_moving_only": 0.0,
+      "moving_weeks": 71,
+      "all_weeks": 104,
+      "top1_squared_error_share": 0.5757543896540839,
+      "top3_squared_error_share": 0.8693092209021129
+    }
+  },
+  "parity_next_feature_consistency_development": {
+    "origin_date": "2024-08-04",
+    "placeholder_target_invariance_verified": true,
+    "manual_serving_features": {
+      "dp1": 0.0,
+      "rpar1": -0.16215031201465538,
+      "rpar2": 0.10078049771558095,
+      "coint_par": 8.935488071413905,
+      "volatility": 0.020034585480727413,
+      "abs_cost_move": 0.16215031201465538
+    },
+    "canonical_next_features": {
+      "dp1": 0.0,
+      "rpar1": -0.16215031201465538,
+      "rpar2": 0.10078049771558095,
+      "coint_par": 10.227782745764546,
+      "volatility": 0.016497085989768078,
+      "abs_cost_move": 0.16215031201465538
+    },
+    "manual_point": 6.025112257081835,
+    "canonical_point": 6.024311074379268,
+    "point_difference_brl_per_liter": -0.0008011827025669049
+  },
+  "arima_development_comparison": {
+    "scope": "26 final development targets, common full history, grid and refit only; excludes bundle fallback",
+    "start": "2024-02-18",
+    "end": "2024-08-11",
+    "mean_absolute_prediction_difference": 1.7610740760718959e-06,
+    "max_absolute_prediction_difference": 1.4644618168802026e-05,
+    "selection_mae": 0.01206189626841244,
+    "production_mae": 0.012062063869000857,
+    "different_order_count": 0,
+    "rows": [
+      {
+        "target_date": "2024-02-18",
+        "actual": 5.97,
+        "selection_arima": 5.96662695284669,
+        "production_arima": 5.96662695284669,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-02-25",
+        "actual": 5.96,
+        "selection_arima": 5.97,
+        "production_arima": 5.97,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-03-03",
+        "actual": 5.95,
+        "selection_arima": 5.95662695284669,
+        "production_arima": 5.95662707187623,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-03-10",
+        "actual": 5.92,
+        "selection_arima": 5.946626952846691,
+        "production_arima": 5.946626837888094,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-03-17",
+        "actual": 5.93,
+        "selection_arima": 5.909880858540071,
+        "production_arima": 5.909877693379562,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-03-24",
+        "actual": 5.92,
+        "selection_arima": 5.933373047153309,
+        "production_arima": 5.9333719716464595,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-03-31",
+        "actual": 5.93,
+        "selection_arima": 5.91662695284669,
+        "production_arima": 5.916628500220226,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-04-07",
+        "actual": 5.93,
+        "selection_arima": 5.933373047153309,
+        "production_arima": 5.933371027865003,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-04-14",
+        "actual": 5.94,
+        "selection_arima": 5.93,
+        "production_arima": 5.93,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-04-21",
+        "actual": 5.96,
+        "selection_arima": 5.94337304715331,
+        "production_arima": 5.943370908971076,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-04-28",
+        "actual": 5.96,
+        "selection_arima": 5.966746094306619,
+        "production_arima": 5.966742991579888,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-05-05",
+        "actual": 5.96,
+        "selection_arima": 5.96,
+        "production_arima": 5.96,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-05-12",
+        "actual": 5.95,
+        "selection_arima": 5.96,
+        "production_arima": 5.96,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-05-19",
+        "actual": 5.93,
+        "selection_arima": 5.946628979941136,
+        "production_arima": 5.946628979941136,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-05-26",
+        "actual": 5.93,
+        "selection_arima": 5.92325795988227,
+        "production_arima": 5.923256786408291,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-06-02",
+        "actual": 5.92,
+        "selection_arima": 5.93,
+        "production_arima": 5.93,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-06-09",
+        "actual": 5.92,
+        "selection_arima": 5.916628979941135,
+        "production_arima": 5.916628868852666,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-06-16",
+        "actual": 5.94,
+        "selection_arima": 5.92,
+        "production_arima": 5.92,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-06-23",
+        "actual": 5.94,
+        "selection_arima": 5.94674204011773,
+        "production_arima": 5.946742024373795,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-06-30",
+        "actual": 5.96,
+        "selection_arima": 5.94,
+        "production_arima": 5.94,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-07-07",
+        "actual": 6.01,
+        "selection_arima": 5.96674204011773,
+        "production_arima": 5.966741073484259,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-07-14",
+        "actual": 6.04,
+        "selection_arima": 6.026855100294324,
+        "production_arima": 6.0268679398517095,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-07-21",
+        "actual": 6.03,
+        "selection_arima": 6.050113060176595,
+        "production_arima": 6.050127704794764,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-07-28",
+        "actual": 6.03,
+        "selection_arima": 6.026628979941135,
+        "production_arima": 6.026626225356868,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-08-04",
+        "actual": 6.03,
+        "selection_arima": 6.03,
+        "production_arima": 6.03,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "target_date": "2024-08-11",
+        "actual": 6.02,
+        "selection_arima": 6.03,
+        "production_arima": 6.03,
+        "selection_order": [
+          1,
+          1,
+          0
+        ],
+        "production_order": [
+          1,
+          1,
+          0
+        ]
+      }
+    ]
+  }
+}

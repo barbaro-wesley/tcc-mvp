@@ -1,0 +1,19 @@
+# Dispara s10-weekly.service toda quarta as 08:00.
+#
+# A ANP publica a revenda as tercas; quarta de manha da folga para a
+# publicacao sair sem que o job corra atras de dado que ainda nao existe.
+
+[Unit]
+Description=Agenda semanal da atualizacao S10 (quarta, 08:00)
+
+[Timer]
+OnCalendar=Wed *-*-* 08:00:00
+# A VPS pode estar desligada ou reiniciando no horario: com Persistent o job
+# roda assim que a maquina volta, em vez de perder a semana em silencio.
+Persistent=true
+# Evita que varias instalacoes batam na ANP no mesmo segundo.
+RandomizedDelaySec=300
+Unit=s10-weekly.service
+
+[Install]
+WantedBy=timers.target
